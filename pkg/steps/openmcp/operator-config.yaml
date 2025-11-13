@@ -1,0 +1,20 @@
+managedControlPlane:
+  mcpClusterPurpose: mcp
+scheduler:
+  scope: Cluster
+  purposeMappings:
+    mcp:
+      template:
+        spec:
+          profile: kind
+          tenancy: Exclusive
+    platform:
+      template:
+        spec:
+          profile: kind
+          tenancy: Shared
+    onboarding:
+      template:
+        spec:
+          profile: kind
+          tenancy: Shared
