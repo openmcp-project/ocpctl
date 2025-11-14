@@ -72,3 +72,18 @@ func CreateCluster(config *v1alpha4.Cluster) []steps.Step {
 		},
 	}
 }
+
+func DeleteCluster(name string) []steps.Step {
+	prov := cluster.NewProvider(
+		cluster.ProviderWithDocker(),
+	)
+
+	return []steps.Step{
+		{
+			Description: fmt.Sprintf("Delete kind cluster %s", name),
+			Run: func(ctx context.Context) error {
+				return prov.Delete(name, "")
+			},
+		},
+	}
+}
