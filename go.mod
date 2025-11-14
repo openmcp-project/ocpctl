@@ -1,4 +1,4 @@
-module github.com/ValentinGerlach/omink
+module github.com/ValentinGerlach/oink
 
 go 1.25.4
 

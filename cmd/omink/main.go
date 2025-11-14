@@ -4,10 +4,10 @@ import (
 	"context"
 	"log"
 
-	"github.com/ValentinGerlach/omink/pkg/env"
-	"github.com/ValentinGerlach/omink/pkg/steps"
-	"github.com/ValentinGerlach/omink/pkg/steps/kind"
-	"github.com/ValentinGerlach/omink/pkg/steps/openmcp"
+	"github.com/ValentinGerlach/oink/pkg/env"
+	"github.com/ValentinGerlach/oink/pkg/steps"
+	"github.com/ValentinGerlach/oink/pkg/steps/kind"
+	"github.com/ValentinGerlach/oink/pkg/steps/openmcp"
 	"sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
 )
 

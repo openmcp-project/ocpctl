@@ -3,8 +3,8 @@ package openmcp
 import (
 	"context"
 
-	"github.com/ValentinGerlach/omink/pkg/env"
-	"github.com/ValentinGerlach/omink/pkg/steps"
+	"github.com/ValentinGerlach/oink/pkg/env"
+	"github.com/ValentinGerlach/oink/pkg/steps"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"

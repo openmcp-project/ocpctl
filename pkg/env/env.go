@@ -21,7 +21,7 @@ type Environment struct {
 }
 
 func (e *Environment) GenerateKindClusterName(name string) string {
-	return fmt.Sprintf("omink.%s.%s", e.Name, name)
+	return fmt.Sprintf("oink.%s.%s", e.Name, name)
 }
 
 type KindCluster struct {

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ValentinGerlach/omink/pkg/env"
-	"github.com/ValentinGerlach/omink/pkg/steps"
+	"github.com/ValentinGerlach/oink/pkg/env"
+	"github.com/ValentinGerlach/oink/pkg/steps"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
