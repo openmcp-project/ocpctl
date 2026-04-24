@@ -1,27 +1,33 @@
 package environments
 
 import (
-	"fmt"
-
+	"github.com/ValentinGerlach/oink/pkg/logging"
+	"github.com/ValentinGerlach/oink/pkg/versions"
 	"github.com/spf13/cobra"
 )
 
 func newUpdateCmd() *cobra.Command {
-	var configFile string
+	var operatorImage string
 
 	cmd := &cobra.Command{
 		Use:   "update <name>",
 		Short: "Update an existing environment",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			log := logging.FromContext(ctx)
 			name := args[0]
-			fmt.Printf("Updating environment %q (config: %s)\n", name, configFile)
+
+			if err := applyPlatformResources(ctx, name, operatorImage); err != nil {
+				return err
+			}
+
+			log.Infof("Environment %q updated successfully", name)
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVarP(&configFile, "config", "c", "", "path to the environment config file")
-	cmd.MarkFlagRequired("config")
+	cmd.Flags().StringVar(&operatorImage, "operator-image", versions.Operator().String(), "container image for the openmcp-operator")
 
 	return cmd
 }

@@ -4,7 +4,9 @@ import (
 	"os"
 
 	"github.com/ValentinGerlach/oink/cmd/environments"
+	"github.com/ValentinGerlach/oink/pkg/logging"
 	"github.com/spf13/cobra"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 var rootCmd = &cobra.Command{
@@ -14,7 +16,12 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
-	err := rootCmd.Execute()
+	ctx := ctrl.SetupSignalHandler()
+
+	logger := logging.NewLogger()
+	ctx = logging.IntoContext(ctx, logger)
+
+	err := rootCmd.ExecuteContext(ctx)
 	if err != nil {
 		os.Exit(1)
 	}
