@@ -16,7 +16,8 @@ func ClusterProviderKind() OciImage {
 	return OciImage{
 		Registry:   "ghcr.io",
 		Repository: "openmcp-project/images/cluster-provider-kind",
-		Tag:        "v0.2.0",
+		// renovate: datasource=github-releases depName=openmcp-project/cluster-provider-kind
+		Tag: "v0.2.0",
 	}
 }
 
@@ -24,6 +25,7 @@ func Operator() OciImage {
 	return OciImage{
 		Registry:   "ghcr.io",
 		Repository: "openmcp-project/images/openmcp-operator",
-		Tag:        "v0.18.1",
+		// renovate: datasource=github-releases depName=openmcp-project/openmcp-operator
+		Tag: "v0.18.1",
 	}
 }
