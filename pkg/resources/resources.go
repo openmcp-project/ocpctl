@@ -18,8 +18,11 @@ type ReadyFn func(ctx context.Context) (bool, error)
 
 // Resource describes a single Kubernetes object to be reconciled, together with
 // optional mutation and readiness logic and a list of objects it depends on.
+// If External is true, the resource is never created or updated — it is only
+// used as a dependency whose readiness can be checked via ReadyFn.
 type Resource struct {
 	Object       client.Object
+	External     bool
 	MutateFn     MutateFn
 	Dependencies []client.Object
 	ReadyFn      ReadyFn
@@ -103,6 +106,9 @@ func applyCluster(ctx context.Context, c *Cluster, index map[client.Object]resou
 	log := logging.FromContext(ctx)
 	var summary ApplySummary
 	for _, r := range c.Resources {
+		if r.External {
+			continue
+		}
 		ready, err := dependenciesReady(ctx, r, index)
 		if err != nil {
 			return summary, fmt.Errorf("checking dependencies for %s: %w", r, err)
@@ -139,11 +145,11 @@ func dependenciesReady(ctx context.Context, r *Resource, index map[client.Object
 			log.Debugf("Dependency %s of %s not found in index", objectString(dep), r)
 			return false, nil
 		}
-		if entry.resource.ReadyFn == nil {
-			continue
-		}
 		if err := entry.cluster.Client.Get(ctx, client.ObjectKeyFromObject(dep), dep); err != nil {
 			return false, fmt.Errorf("getting dependency %s: %w", entry.resource, err)
+		}
+		if entry.resource.ReadyFn == nil {
+			continue
 		}
 		ready, err := entry.resource.ReadyFn(ctx)
 		if err != nil {

@@ -8,6 +8,7 @@ import (
 
 func newUpdateCmd() *cobra.Command {
 	var operatorImage string
+	var clusterProviderImage string
 
 	cmd := &cobra.Command{
 		Use:   "update <name>",
@@ -18,7 +19,7 @@ func newUpdateCmd() *cobra.Command {
 			log := logging.FromContext(ctx)
 			name := args[0]
 
-			if err := applyPlatformResources(ctx, name, operatorImage); err != nil {
+			if err := applyPlatformResources(ctx, name, operatorImage, clusterProviderImage); err != nil {
 				return err
 			}
 
@@ -28,6 +29,7 @@ func newUpdateCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&operatorImage, "operator-image", versions.Operator().String(), "container image for the openmcp-operator")
+	cmd.Flags().StringVar(&clusterProviderImage, "cluster-provider-image", versions.ClusterProviderKind().String(), "container image for the kind cluster provider")
 
 	return cmd
 }

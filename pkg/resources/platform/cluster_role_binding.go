@@ -1,6 +1,8 @@
 package platform
 
 import (
+	"context"
+
 	"github.com/ValentinGerlach/oink/pkg/resources"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -15,22 +17,25 @@ func OperatorClusterRoleBinding(sa *corev1.ServiceAccount) *resources.Resource {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "openmcp-operator",
 		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     "cluster-admin",
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      sa.Name,
-				Namespace: sa.Namespace,
-			},
-		},
 	}
 
 	return &resources.Resource{
 		Object:       crb,
 		Dependencies: []client.Object{sa},
+		MutateFn: func(ctx context.Context) error {
+			crb.RoleRef = rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     "cluster-admin",
+			}
+			crb.Subjects = []rbacv1.Subject{
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Name:      sa.Name,
+					Namespace: sa.Namespace,
+				},
+			}
+			return nil
+		},
 	}
 }

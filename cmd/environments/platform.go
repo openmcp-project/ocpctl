@@ -9,6 +9,7 @@ import (
 	"github.com/ValentinGerlach/oink/pkg/logging"
 	"github.com/ValentinGerlach/oink/pkg/resources"
 	"github.com/ValentinGerlach/oink/pkg/resources/platform"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 )
@@ -16,7 +17,7 @@ import (
 // applyPlatformResources connects to the platform cluster for the given
 // environment and applies all platform resources, retrying every 5 seconds
 // until no resources are skipped due to unready dependencies.
-func applyPlatformResources(ctx context.Context, environment, operatorImage string) error {
+func applyPlatformResources(ctx context.Context, environment, operatorImage, clusterProviderImage string) error {
 	log := logging.FromContext(ctx)
 
 	log.Info("Building platform cluster client")
@@ -31,8 +32,10 @@ func applyPlatformResources(ctx context.Context, environment, operatorImage stri
 	sa := saResource.Object.(*corev1.ServiceAccount)
 	crbResource := platform.OperatorClusterRoleBinding(sa)
 	crb := crbResource.Object.(*rbacv1.ClusterRoleBinding)
-	cmResource := platform.OperatorConfigMap(ns)
+	cmResource := platform.OperatorConfigMap(environment, ns)
 	cm := cmResource.Object.(*corev1.ConfigMap)
+	deploymentResource := platform.OperatorDeployment(operatorImage, environment, ns, sa, crb, cm)
+	deployment := deploymentResource.Object.(*appsv1.Deployment)
 
 	platformCluster := &resources.Cluster{Client: c}
 	platformCluster.AddResources(
@@ -40,7 +43,9 @@ func applyPlatformResources(ctx context.Context, environment, operatorImage stri
 		saResource,
 		crbResource,
 		cmResource,
-		platform.OperatorDeployment(operatorImage, environment, ns, sa, crb, cm),
+		deploymentResource,
+		platform.PlatformCluster(environment, ns, deployment),
+		platform.ClusterProvider(clusterProviderImage, deployment),
 	)
 
 	manager := &resources.Manager{}

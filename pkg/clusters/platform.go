@@ -3,6 +3,8 @@ package clusters
 import (
 	"fmt"
 
+	clustersv1alpha1 "github.com/openmcp-project/openmcp-operator/api/clusters/v1alpha1"
+	providerv1alpha1 "github.com/openmcp-project/openmcp-operator/api/provider/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
@@ -49,6 +51,12 @@ func PlatformClusterClient(environment string) (client.Client, error) {
 
 	scheme := runtime.NewScheme()
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	if err := clustersv1alpha1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	if err := providerv1alpha1.AddToScheme(scheme); err != nil {
 		return nil, err
 	}
 
