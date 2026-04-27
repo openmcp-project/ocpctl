@@ -3,16 +3,16 @@ package cmd
 import (
 	"os"
 
-	"github.com/ValentinGerlach/oink/cmd/environments"
-	"github.com/ValentinGerlach/oink/pkg/logging"
+	"github.com/ValentinGerlach/ocpctl/cmd/environments"
+	"github.com/ValentinGerlach/ocpctl/pkg/logging"
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "oink",
+	Use:   "ocpctl",
 	Short: "Run local OpenControlPlane environments in kind clusters",
-	Long:  `oink is a CLI tool for running local OpenControlPlane environments in kind clusters, for local development or CI.`,
+	Long:  `ocpctl is a CLI tool for running local OpenControlPlane environments in kind clusters, for local development or CI.`,
 }
 
 func Execute() {

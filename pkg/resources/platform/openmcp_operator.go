@@ -3,7 +3,7 @@ package platform
 import (
 	"context"
 
-	"github.com/ValentinGerlach/oink/pkg/resources"
+	"github.com/ValentinGerlach/ocpctl/pkg/resources"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"

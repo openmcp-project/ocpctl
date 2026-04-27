@@ -1,6 +1,6 @@
 package main
 
-import "github.com/ValentinGerlach/oink/cmd"
+import "github.com/ValentinGerlach/ocpctl/cmd"
 
 func main() {
 	cmd.Execute()

@@ -1,6 +1,6 @@
-# oink
+# ocpctl
 
-oink is a CLI tool for running local [OpenControlPlane](https://openmcp-project.github.io/docs/) environments in [kind](https://kind.sigs.k8s.io/) clusters, for local development or CI.
+ocpctl is a CLI tool for running local [OpenControlPlane](https://openmcp-project.github.io/docs/) environments in [kind](https://kind.sigs.k8s.io/) clusters, for local development or CI.
 
 ## Prerequisites
 
@@ -9,22 +9,22 @@ oink is a CLI tool for running local [OpenControlPlane](https://openmcp-project.
 ## Installation
 
 ```bash
-go install github.com/ValentinGerlach/oink@latest
+go install github.com/ValentinGerlach/ocpctl@latest
 ```
 
 ## Usage
 
 ```
-oink env create <name> [--operator-image <image>]
-oink env update <name> [--operator-image <image>]
-oink env delete <name>
-oink env list
+ocpctl env create <name> [--operator-image <image>]
+ocpctl env update <name> [--operator-image <image>]
+ocpctl env delete <name>
+ocpctl env list
 ```
 
 ### Create an environment
 
 ```bash
-oink env create my-env
+ocpctl env create my-env
 ```
 
 This will:
@@ -37,7 +37,7 @@ This will:
 Re-applies all platform resources against an existing cluster, useful for picking up image or config changes:
 
 ```bash
-oink env update my-env --operator-image ghcr.io/openmcp-project/images/openmcp-operator:v0.19.0
+ocpctl env update my-env --operator-image ghcr.io/openmcp-project/images/openmcp-operator:v0.19.0
 ```
 
 ## Multiple environments

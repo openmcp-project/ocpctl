@@ -1,4 +1,4 @@
-module github.com/ValentinGerlach/oink
+module github.com/ValentinGerlach/ocpctl
 
 go 1.26.2
 
