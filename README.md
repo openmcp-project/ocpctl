@@ -15,30 +15,54 @@ go install github.com/ValentinGerlach/ocpctl@latest
 ## Usage
 
 ```
-ocpctl env create <name> [--operator-image <image>]
-ocpctl env update <name> [--operator-image <image>]
+ocpctl env apply <name> [--config <file>]
 ocpctl env delete <name>
 ocpctl env list
 ```
 
-### Create an environment
+### Apply an environment
+
+Creates or updates a local OpenControlPlane environment:
 
 ```bash
-ocpctl env create my-env
+ocpctl env apply my-env
 ```
 
 This will:
-1. Create a kind cluster named `my-env-platform`
+1. Create a kind cluster named `my-env-platform` (if it doesn't exist)
 2. Apply the openmcp-operator namespace, service account, RBAC, config, and deployment
-3. Wait until all resources are ready
+3. Apply the ClusterProvider and PlatformCluster resources
+4. Wait until all resources are ready
 
-### Update an environment
+### Configuration
 
-Re-applies all platform resources against an existing cluster, useful for picking up image or config changes:
+By default, ocpctl uses [built-in image versions](pkg/config/environment-defaults.yaml). To override them, provide a config file:
 
 ```bash
-ocpctl env update my-env --operator-image ghcr.io/openmcp-project/images/openmcp-operator:v0.19.0
+ocpctl env apply my-env --config env.yaml
 ```
+
+Config files use the following format:
+
+```yaml
+apiVersion: ocpctl.openmcp.cloud/v1alpha1
+kind: Environment
+spec:
+  namespace: openmcp-system
+  operator:
+    image: ghcr.io/openmcp-project/images/openmcp-operator:v0.18.1
+  clusterProviders:
+    - name: kind
+      image: ghcr.io/openmcp-project/images/cluster-provider-kind:v0.2.0
+  serviceProviders:
+    - name: example
+      image: ghcr.io/openmcp-project/images/service-provider-example:v0.4.1
+  platformServices:
+    - name: example
+      image: ghcr.io/openmcp-project/images/platform-service-example:v0.0.10
+```
+
+Only fields present in the config file override the defaults — omitted fields keep their default values.
 
 ## Multiple environments
 
