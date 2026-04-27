@@ -13,9 +13,38 @@ import (
 	"sigs.k8s.io/kind/pkg/cluster"
 )
 
-// CreatePlatformCluster creates the kind cluster for the platform components.
-// The cluster name is scoped to the given environment so multiple OinK
-// environments can coexist on the same machine.
+// EnsurePlatformCluster creates the kind cluster for the platform components if
+// it does not already exist. Returns true if the cluster was newly created.
+func EnsurePlatformCluster(environment string) (bool, error) {
+	name := platformClusterName(environment)
+	provider := cluster.NewProvider()
+
+	existing, err := provider.List()
+	if err != nil {
+		return false, fmt.Errorf("listing kind clusters: %w", err)
+	}
+	for _, c := range existing {
+		if c == name {
+			return false, nil
+		}
+	}
+
+	return true, provider.Create(name, cluster.CreateWithV1Alpha4Config(&v1alpha4.Cluster{
+		Nodes: []v1alpha4.Node{
+			{
+				Role: v1alpha4.ControlPlaneRole,
+				ExtraMounts: []v1alpha4.Mount{
+					{
+						HostPath:      "/var/run/docker.sock",
+						ContainerPath: "/var/run/host-docker.sock",
+					},
+				},
+			},
+		},
+	}))
+}
+
+// Deprecated: use EnsurePlatformCluster instead.
 func CreatePlatformCluster(environment string) error {
 	name := platformClusterName(environment)
 	provider := cluster.NewProvider()

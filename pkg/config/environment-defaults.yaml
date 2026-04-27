@@ -1,0 +1,15 @@
+apiVersion: ocpctl.openmcp.cloud/v1alpha1
+kind: Environment
+spec:
+  namespace: openmcp-system
+  operator:
+    image: ghcr.io/openmcp-project/images/openmcp-operator:v0.18.1
+  clusterProviders:
+    - name: kind
+      image: ghcr.io/openmcp-project/images/cluster-provider-kind:v0.2.0
+  serviceProviders:
+    - name: crossplane
+      image: ghcr.io/openmcp-project/images/service-provider-crossplane:v0.4.1
+  platformServices:
+    - name: gateway
+      image: ghcr.io/openmcp-project/images/platform-service-gateway:v0.0.10

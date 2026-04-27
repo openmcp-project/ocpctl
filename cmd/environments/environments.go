@@ -10,8 +10,7 @@ func NewEnvironmentsCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(
-		newCreateCmd(),
-		newUpdateCmd(),
+		newApplyCmd(),
 		newListCmd(),
 		newDeleteCmd(),
 	)
