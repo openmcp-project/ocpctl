@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/openmcp-project/ocpctl/pkg/clusters"
+	"github.com/openmcp-project/ocpctl/pkg/config"
 	"github.com/openmcp-project/ocpctl/pkg/logging"
 	"github.com/openmcp-project/ocpctl/pkg/resources"
 	"github.com/openmcp-project/ocpctl/pkg/resources/platform"
@@ -14,9 +15,39 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
-// applyPlatformResources connects to the platform cluster for the given
-// environment and applies all platform resources, retrying every 5 seconds
-// until no resources are skipped due to unready dependencies.
+func Apply(ctx context.Context, name string, cfg *config.Environment) error {
+	log := logging.FromContext(ctx)
+
+	clusterProviderImage := ""
+	for _, cp := range cfg.Spec.ClusterProviders {
+		if cp.Name == "kind" {
+			clusterProviderImage = cp.Image
+			break
+		}
+	}
+	if clusterProviderImage == "" {
+		return fmt.Errorf("no cluster provider for kind configured")
+	}
+
+	log.Infof("Ensuring platform cluster for environment %q", name)
+	created, err := clusters.EnsurePlatformCluster(name)
+	if err != nil {
+		return fmt.Errorf("ensuring platform cluster: %w", err)
+	}
+	if created {
+		log.Info("Platform cluster created")
+	} else {
+		log.Info("Platform cluster already exists")
+	}
+
+	if err := applyPlatformResources(ctx, name, cfg.Spec.Operator.Image, clusterProviderImage); err != nil {
+		return err
+	}
+
+	log.Infof("Environment %q applied successfully", name)
+	return nil
+}
+
 func applyPlatformResources(ctx context.Context, environment, operatorImage, clusterProviderImage string) error {
 	log := logging.FromContext(ctx)
 
