@@ -3,12 +3,10 @@
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": ["^pkg/versions/default\\.go$"],
+      "fileMatch": ["^pkg/config/environment-defaults\\.yaml$"],
       "matchStrings": [
-        "// renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\n]+)\\n\\s+Tag: \"(?<currentValue>[^\"]+)\""
-      ],
-      "datasourceTemplate": "{{datasource}}",
-      "depNameTemplate": "{{depName}}"
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+image: [^:]+:(?<currentValue>\\S+)"
+      ]
     }
   ]
 }
