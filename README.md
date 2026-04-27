@@ -1,6 +1,8 @@
 # ocpctl
 
-ocpctl is a CLI tool for running local [OpenControlPlane](https://openmcp-project.github.io/docs/) environments in [kind](https://kind.sigs.k8s.io/) clusters, for local development or CI.
+ocpctl is a CLI tool for [OpenControlPlane](https://openmcp-project.github.io/docs/).
+
+> **Note:** ocpctl currently supports managing local environments running in [kind](https://kind.sigs.k8s.io/) clusters, for development, testing, and CI use cases. Additional features are planned for future releases.
 
 ## Prerequisites
 
