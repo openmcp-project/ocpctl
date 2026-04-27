@@ -1,4 +1,4 @@
-module github.com/ValentinGerlach/ocpctl
+module github.com/openmcp-project/ocpctl
 
 go 1.26.2
 

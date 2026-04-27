@@ -3,9 +3,9 @@ package environments
 import (
 	"fmt"
 
-	"github.com/ValentinGerlach/ocpctl/pkg/clusters"
-	"github.com/ValentinGerlach/ocpctl/pkg/config"
-	"github.com/ValentinGerlach/ocpctl/pkg/logging"
+	"github.com/openmcp-project/ocpctl/pkg/clusters"
+	"github.com/openmcp-project/ocpctl/pkg/config"
+	"github.com/openmcp-project/ocpctl/pkg/logging"
 	"github.com/spf13/cobra"
 )
 

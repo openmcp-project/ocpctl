@@ -9,7 +9,7 @@ ocpctl is a CLI tool for running local [OpenControlPlane](https://openmcp-projec
 ## Installation
 
 ```bash
-go install github.com/ValentinGerlach/ocpctl@latest
+go install github.com/openmcp-project/ocpctl@latest
 ```
 
 ## Usage

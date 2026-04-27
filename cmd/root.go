@@ -3,8 +3,8 @@ package cmd
 import (
 	"os"
 
-	"github.com/ValentinGerlach/ocpctl/cmd/environments"
-	"github.com/ValentinGerlach/ocpctl/pkg/logging"
+	"github.com/openmcp-project/ocpctl/cmd/environments"
+	"github.com/openmcp-project/ocpctl/pkg/logging"
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
