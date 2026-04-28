@@ -44,25 +44,6 @@ func EnsurePlatformCluster(environment string) (bool, error) {
 	}))
 }
 
-// Deprecated: use EnsurePlatformCluster instead.
-func CreatePlatformCluster(environment string) error {
-	name := platformClusterName(environment)
-	provider := cluster.NewProvider()
-	return provider.Create(name, cluster.CreateWithV1Alpha4Config(&v1alpha4.Cluster{
-		Nodes: []v1alpha4.Node{
-			{
-				Role: v1alpha4.ControlPlaneRole,
-				ExtraMounts: []v1alpha4.Mount{
-					{
-						HostPath:      "/var/run/docker.sock",
-						ContainerPath: "/var/run/host-docker.sock",
-					},
-				},
-			},
-		},
-	}))
-}
-
 // PlatformClusterClient returns a controller-runtime client for the platform cluster of the given environment.
 func PlatformClusterClient(environment string) (client.Client, error) {
 	name := platformClusterName(environment)
