@@ -6,7 +6,7 @@ ocpctl is a CLI tool for [OpenControlPlane](https://openmcp-project.github.io/do
 
 ## Prerequisites
 
-- [kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation)
+- [Docker](https://docs.docker.com/get-docker/)
 
 ## Installation
 
