@@ -12,7 +12,7 @@ import (
 )
 
 // PlatformCluster returns a Resource for the platform Cluster custom resource
-// in the openmcp-system namespace. This resource registers the platform kind cluster
+// in the operator namespace. This resource registers the platform kind cluster
 // with the openmcp-operator. Depends on the operator deployment being ready.
 func PlatformCluster(environment string, ns *corev1.Namespace, deployment *appsv1.Deployment) *resources.Resource {
 	cluster := &v1alpha1.Cluster{
