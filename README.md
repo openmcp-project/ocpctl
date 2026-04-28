@@ -6,7 +6,7 @@ ocpctl is a CLI tool for [OpenControlPlane](https://openmcp-project.github.io/do
 
 ## Prerequisites
 
-- [kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation)
+- [Docker](https://docs.docker.com/get-docker/)
 
 ## Installation
 
@@ -47,7 +47,7 @@ ocpctl env apply my-env --config env.yaml
 Config files use the following format:
 
 ```yaml
-apiVersion: ocpctl.openmcp.cloud/v1alpha1
+apiVersion: ocpctl.open-control-plane.io/v1alpha1
 kind: Environment
 spec:
   namespace: openmcp-system

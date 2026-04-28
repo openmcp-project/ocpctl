@@ -1,4 +1,4 @@
-apiVersion: ocpctl.openmcp.cloud/v1alpha1
+apiVersion: ocpctl.open-control-plane.io/v1alpha1
 kind: Environment
 spec:
   namespace: openmcp-system
