@@ -50,6 +50,9 @@ func applyPlatformResources(ctx context.Context, environment string, cfg *config
 	if clusterProviderImage == "" {
 		return fmt.Errorf("no cluster provider for kind configured")
 	}
+	if cfg.Spec.Namespace == "" {
+		return fmt.Errorf("namespace must not be empty")
+	}
 
 	log.Info("Building platform cluster client")
 	c, err := clusters.PlatformClusterClient(environment)
