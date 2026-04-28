@@ -18,17 +18,6 @@ import (
 func Apply(ctx context.Context, name string, cfg *config.Environment) error {
 	log := logging.FromContext(ctx)
 
-	clusterProviderImage := ""
-	for _, cp := range cfg.Spec.ClusterProviders {
-		if cp.Name == "kind" {
-			clusterProviderImage = cp.Image
-			break
-		}
-	}
-	if clusterProviderImage == "" {
-		return fmt.Errorf("no cluster provider for kind configured")
-	}
-
 	log.Infof("Ensuring platform cluster for environment %q", name)
 	created, err := clusters.EnsurePlatformCluster(name)
 	if err != nil {
@@ -40,7 +29,7 @@ func Apply(ctx context.Context, name string, cfg *config.Environment) error {
 		log.Info("Platform cluster already exists")
 	}
 
-	if err := applyPlatformResources(ctx, name, cfg.Spec.Operator.Image, clusterProviderImage); err != nil {
+	if err := applyPlatformResources(ctx, name, cfg); err != nil {
 		return err
 	}
 
@@ -48,8 +37,19 @@ func Apply(ctx context.Context, name string, cfg *config.Environment) error {
 	return nil
 }
 
-func applyPlatformResources(ctx context.Context, environment, operatorImage, clusterProviderImage string) error {
+func applyPlatformResources(ctx context.Context, environment string, cfg *config.Environment) error {
 	log := logging.FromContext(ctx)
+
+	clusterProviderImage := ""
+	for _, cp := range cfg.Spec.ClusterProviders {
+		if cp.Name == "kind" {
+			clusterProviderImage = cp.Image
+			break
+		}
+	}
+	if clusterProviderImage == "" {
+		return fmt.Errorf("no cluster provider for kind configured")
+	}
 
 	log.Info("Building platform cluster client")
 	c, err := clusters.PlatformClusterClient(environment)
@@ -57,7 +57,7 @@ func applyPlatformResources(ctx context.Context, environment, operatorImage, clu
 		return fmt.Errorf("building platform cluster client: %w", err)
 	}
 
-	nsResource := platform.OperatorNamespace()
+	nsResource := platform.OperatorNamespace(cfg.Spec.Namespace)
 	ns := nsResource.Object.(*corev1.Namespace)
 	saResource := platform.OperatorServiceAccount(ns)
 	sa := saResource.Object.(*corev1.ServiceAccount)
@@ -65,7 +65,7 @@ func applyPlatformResources(ctx context.Context, environment, operatorImage, clu
 	crb := crbResource.Object.(*rbacv1.ClusterRoleBinding)
 	cmResource := platform.OperatorConfigMap(environment, ns)
 	cm := cmResource.Object.(*corev1.ConfigMap)
-	deploymentResource := platform.OperatorDeployment(operatorImage, environment, ns, sa, crb, cm)
+	deploymentResource := platform.OperatorDeployment(cfg.Spec.Operator.Image, environment, ns, sa, crb, cm)
 	deployment := deploymentResource.Object.(*appsv1.Deployment)
 
 	platformCluster := &resources.Cluster{Client: c}

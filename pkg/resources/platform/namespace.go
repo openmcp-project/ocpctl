@@ -8,11 +8,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// OperatorNamespace returns a Resource for the openmcp-system namespace.
-func OperatorNamespace() *resources.Resource {
+// OperatorNamespace returns a Resource for the given namespace.
+func OperatorNamespace(namespace string) *resources.Resource {
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "openmcp-system",
+			Name: namespace,
 		},
 	}
 
