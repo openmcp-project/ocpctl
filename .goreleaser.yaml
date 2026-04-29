@@ -1,0 +1,49 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - main: ./main.go
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - arm64
+      - amd64
+    binary: >-
+      {{ .ProjectName }}-
+      {{- .Version }}-
+      {{- .Os }}-
+      {{- if eq .Arch "amd64" }}amd64
+      {{- else if eq .Arch "amd64_v1" }}amd64
+      {{- else if eq .Arch "386" }}386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}-{{ .Arm }}{{ end }}
+    no_unique_dist_dir: true
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/openmcp-project/ocpctl/internal/version.version={{ .Summary }}
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+release:
+  footer: >-
+
+    ---
+
+    Released by [GoReleaser](https://github.com/goreleaser/goreleaser).

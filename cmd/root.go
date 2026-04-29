@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/openmcp-project/ocpctl/cmd/environments"
+	cmdversion "github.com/openmcp-project/ocpctl/cmd/version"
+	"github.com/openmcp-project/ocpctl/internal/version"
 	"github.com/openmcp-project/ocpctl/pkg/logging"
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -29,4 +32,7 @@ func Execute() {
 
 func init() {
 	rootCmd.AddCommand(environments.NewEnvironmentsCmd())
+	rootCmd.AddCommand(cmdversion.NewVersionCmd())
+	rootCmd.Version = version.Version()
+	rootCmd.SetVersionTemplate(fmt.Sprintf("%s\n", version.Version()))
 }
