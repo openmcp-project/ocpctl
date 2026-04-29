@@ -4,7 +4,9 @@
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": ["^pkg/config/environment-defaults\\.yaml$"],
+      "managerFilePatterns": [
+        "/^pkg/config/environment-defaults\\.yaml$/"
+      ],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+image: [^:]+:(?<currentValue>\\S+)"
       ]
