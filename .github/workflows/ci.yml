@@ -22,5 +22,8 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      - name: Lint
+        uses: golangci/golangci-lint-action@v8
+
       - name: Test
         run: go test ./...
