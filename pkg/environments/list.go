@@ -25,10 +25,10 @@ func List(ctx context.Context) ([]string, error) {
 
 	var environments []string
 	for _, c := range kindClusters {
-		if !strings.HasSuffix(c, "-platform") {
+		if !strings.HasSuffix(c, clusters.PlatformClusterSuffix) {
 			continue
 		}
-		env := strings.TrimSuffix(c, "-platform")
+		env := strings.TrimSuffix(c, clusters.PlatformClusterSuffix)
 
 		managed, err := isOcpctlManaged(ctx, env)
 		if err != nil {

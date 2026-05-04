@@ -73,6 +73,8 @@ func PlatformClusterClient(environment string) (client.Client, error) {
 	return client.New(restConfig, client.Options{Scheme: scheme})
 }
 
+const PlatformClusterSuffix = "-platform"
+
 func platformClusterName(environment string) string {
-	return fmt.Sprintf("%s-platform", environment)
+	return environment + PlatformClusterSuffix
 }
