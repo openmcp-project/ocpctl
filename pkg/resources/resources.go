@@ -54,9 +54,7 @@ type Cluster struct {
 
 // AddResources appends resources to the cluster.
 func (c *Cluster) AddResources(rs ...*Resource) {
-	for _, r := range rs {
-		c.Resources = append(c.Resources, r)
-	}
+	c.Resources = append(c.Resources, rs...)
 }
 
 // Manager coordinates applying resources across multiple clusters.
@@ -66,9 +64,7 @@ type Manager struct {
 
 // AddClusters appends clusters to the manager.
 func (m *Manager) AddClusters(cs ...*Cluster) {
-	for _, c := range cs {
-		m.Clusters = append(m.Clusters, c)
-	}
+	m.Clusters = append(m.Clusters, cs...)
 }
 
 // Apply creates or updates all resources across all clusters. Resources whose
