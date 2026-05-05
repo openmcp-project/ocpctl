@@ -6,6 +6,8 @@ import (
 	"reflect"
 
 	"github.com/openmcp-project/ocpctl/pkg/logging"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -41,8 +43,9 @@ func objectString(obj client.Object) string {
 
 // ApplySummary holds the result of an Apply call.
 type ApplySummary struct {
-	Applied int
-	Skipped int
+	Applied        []*Resource
+	Ready          []*Resource
+	WaitingForDeps []*Resource
 }
 
 // Cluster groups a controller-runtime client with the set of resources that
@@ -84,8 +87,9 @@ func (m *Manager) Apply(ctx context.Context) (ApplySummary, error) {
 		if err != nil {
 			return total, err
 		}
-		total.Applied += s.Applied
-		total.Skipped += s.Skipped
+		total.Applied = append(total.Applied, s.Applied...)
+		total.Ready = append(total.Ready, s.Ready...)
+		total.WaitingForDeps = append(total.WaitingForDeps, s.WaitingForDeps...)
 	}
 	return total, nil
 }
@@ -111,7 +115,7 @@ func applyCluster(ctx context.Context, c *Cluster, index map[client.Object]resou
 		}
 		if !ready {
 			log.Debugf("Skipping %s: dependencies not ready", r)
-			summary.Skipped++
+			summary.WaitingForDeps = append(summary.WaitingForDeps, r)
 			continue
 		}
 
@@ -125,14 +129,37 @@ func applyCluster(ctx context.Context, c *Cluster, index map[client.Object]resou
 			return summary, fmt.Errorf("applying %s: %w", r, err)
 		}
 		log.Debugf("Applied %s (%s)", r, result)
-		summary.Applied++
+		summary.Applied = append(summary.Applied, r)
+
+		ready, err = isReady(ctx, r, c.Client)
+		if err != nil {
+			return summary, fmt.Errorf("checking readiness of %s: %w", r, err)
+		}
+		if ready {
+			summary.Ready = append(summary.Ready, r)
+		}
 	}
 	return summary, nil
 }
 
-// dependenciesReady fetches the latest state of each dependency from its
-// cluster and calls its ReadyFn. Returns false if any dependency is not found
-// in the index or reports not ready. A dependency without a ReadyFn is assumed ready.
+// isReady fetches the latest state of r from c and reports whether r is ready.
+// Returns (false, nil) if the resource or its CRD does not exist yet.
+// A resource without a ReadyFn is considered ready once it exists.
+func isReady(ctx context.Context, r *Resource, c client.Client) (bool, error) {
+	if err := c.Get(ctx, client.ObjectKeyFromObject(r.Object), r.Object); err != nil {
+		if apierrors.IsNotFound(err) || apimeta.IsNoMatchError(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("getting %s: %w", r, err)
+	}
+	if r.ReadyFn == nil {
+		return true, nil
+	}
+	return r.ReadyFn(ctx)
+}
+
+// dependenciesReady reports whether all dependencies of r are ready.
+// Returns false if any dependency is not found in the index or is not ready.
 func dependenciesReady(ctx context.Context, r *Resource, index map[client.Object]resourceEntry) (bool, error) {
 	log := logging.FromContext(ctx)
 	for _, dep := range r.Dependencies {
@@ -141,15 +168,9 @@ func dependenciesReady(ctx context.Context, r *Resource, index map[client.Object
 			log.Debugf("Dependency %s of %s not found in index", objectString(dep), r)
 			return false, nil
 		}
-		if err := entry.cluster.Client.Get(ctx, client.ObjectKeyFromObject(dep), dep); err != nil {
-			return false, fmt.Errorf("getting dependency %s: %w", entry.resource, err)
-		}
-		if entry.resource.ReadyFn == nil {
-			continue
-		}
-		ready, err := entry.resource.ReadyFn(ctx)
+		ready, err := isReady(ctx, entry.resource, entry.cluster.Client)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("checking dependency %s: %w", entry.resource, err)
 		}
 		if !ready {
 			log.Debugf("Dependency %s of %s is not ready", entry.resource, r)
