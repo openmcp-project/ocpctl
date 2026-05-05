@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/openmcp-project/ocpctl/pkg/resources"
+	commonapi "github.com/openmcp-project/openmcp-operator/api/common"
 	"github.com/openmcp-project/openmcp-operator/api/provider/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,6 +23,12 @@ func ClusterProvider(image string, deployment *appsv1.Deployment) *resources.Res
 	return &resources.Resource{
 		Object:       provider,
 		Dependencies: []client.Object{deployment},
+		ReadyFn: func(ctx context.Context) (bool, error) {
+			if provider.Status.ObservedGeneration != provider.Generation {
+				return false, nil
+			}
+			return provider.Status.Phase == commonapi.StatusPhaseReady, nil
+		},
 		MutateFn: func(_ context.Context) error {
 			provider.Spec = v1alpha1.ClusterProviderSpec{
 				DeploymentSpec: v1alpha1.DeploymentSpec{
