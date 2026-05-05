@@ -48,6 +48,11 @@ type ApplySummary struct {
 	WaitingForDeps []*Resource
 }
 
+// Total returns the total number of resources across Applied and WaitingForDeps.
+func (s ApplySummary) Total() int {
+	return len(s.Applied) + len(s.WaitingForDeps)
+}
+
 // Cluster groups a controller-runtime client with the set of resources that
 // should be reconciled against that cluster.
 type Cluster struct {
