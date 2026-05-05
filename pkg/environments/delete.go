@@ -43,6 +43,9 @@ func Delete(ctx context.Context, name string) error {
 		kindClusters = append(kindClusters, ps.KindClusterName)
 	}
 
+	platformCluster := clusters.PlatformClusterName(name)
+	sortPlatformLast(kindClusters, platformCluster)
+
 	provider := cluster.NewProvider()
 	for _, kindCluster := range kindClusters {
 		log.Infof("Deleting kind cluster %q", kindCluster)
@@ -52,4 +55,14 @@ func Delete(ctx context.Context, name string) error {
 	}
 
 	return nil
+}
+
+// sortPlatformLast moves the platform cluster to the end of the slice so it is deleted last.
+func sortPlatformLast(clusters []string, platformCluster string) {
+	for i, c := range clusters {
+		if c == platformCluster {
+			clusters[i], clusters[len(clusters)-1] = clusters[len(clusters)-1], clusters[i]
+			return
+		}
+	}
 }
