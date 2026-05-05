@@ -75,7 +75,7 @@ spec:
     image: ghcr.io/openmcp-project/images/openmcp-operator:v0.18.1
   clusterProviders:
     - name: kind
-      image: ghcr.io/openmcp-project/images/cluster-provider-kind:v0.3.0
+      image: ghcr.io/openmcp-project/images/cluster-provider-kind:v0.3.1
   serviceProviders:
     - name: example
       image: ghcr.io/openmcp-project/images/service-provider-example:v0.4.1
