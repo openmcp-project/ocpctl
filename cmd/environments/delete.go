@@ -1,8 +1,7 @@
 package environments
 
 import (
-	"fmt"
-
+	envpkg "github.com/openmcp-project/ocpctl/pkg/environments"
 	"github.com/spf13/cobra"
 )
 
@@ -12,9 +11,7 @@ func newDeleteCmd() *cobra.Command {
 		Short: "Delete an environment",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			name := args[0]
-			fmt.Printf("Deleting environment %q\n", name)
-			return nil
+			return envpkg.Delete(cmd.Context(), args[0])
 		},
 	}
 }

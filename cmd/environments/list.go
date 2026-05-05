@@ -3,6 +3,7 @@ package environments
 import (
 	"fmt"
 
+	envpkg "github.com/openmcp-project/ocpctl/pkg/environments"
 	"github.com/spf13/cobra"
 )
 
@@ -12,7 +13,22 @@ func newListCmd() *cobra.Command {
 		Short: "List all environments",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("Listing environments")
+			ctx := cmd.Context()
+
+			environments, err := envpkg.List(ctx)
+			if err != nil {
+				return err
+			}
+
+			if len(environments) == 0 {
+				fmt.Println("No environments found.")
+				return nil
+			}
+
+			for _, env := range environments {
+				fmt.Println(env)
+			}
+
 			return nil
 		},
 	}

@@ -36,6 +36,26 @@ This will:
 3. Apply the ClusterProvider and PlatformCluster resources
 4. Wait until all resources are ready
 
+### List environments
+
+Lists all ocpctl-managed local environments:
+
+```bash
+ocpctl env list
+```
+
+Only environments whose platform cluster has the Cluster CRD installed (i.e. were created by ocpctl) are shown.
+
+### Delete an environment
+
+Deletes all kind clusters belonging to an environment:
+
+```bash
+ocpctl env delete my-env
+```
+
+This connects to the platform cluster, collects every kind cluster recorded in the `Cluster` resource provider statuses, and deletes them all.
+
 ### Configuration
 
 By default, ocpctl uses [built-in image versions](pkg/config/environment-defaults.yaml). To override them, provide a config file:
@@ -55,7 +75,7 @@ spec:
     image: ghcr.io/openmcp-project/images/openmcp-operator:v0.18.1
   clusterProviders:
     - name: kind
-      image: ghcr.io/openmcp-project/images/cluster-provider-kind:v0.2.0
+      image: ghcr.io/openmcp-project/images/cluster-provider-kind:v0.3.0
   serviceProviders:
     - name: example
       image: ghcr.io/openmcp-project/images/service-provider-example:v0.4.1
