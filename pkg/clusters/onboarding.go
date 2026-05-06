@@ -1,7 +1,7 @@
 package clusters
 
-const OnboardingClusterSuffix = "-onboarding"
+const onboardingClusterSuffix = "-onboarding"
 
 func OnboardingClusterName(environment string) string {
-	return environment + OnboardingClusterSuffix
+	return environment + onboardingClusterSuffix
 }
