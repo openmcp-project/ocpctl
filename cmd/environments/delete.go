@@ -9,7 +9,7 @@ func newDeleteCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "delete <name>",
 		Short: "Delete an environment",
-		Args:  cobra.ExactArgs(1),
+		Args:  validatedNameArg,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return envpkg.Delete(cmd.Context(), args[0])
 		},
