@@ -91,8 +91,8 @@ func applyPlatformResources(ctx context.Context, environment string, cfg *config
 		if err != nil {
 			return fmt.Errorf("applying resources: %w", err)
 		}
-		log.Infof("Applied: %d, Skipped: %d", summary.Applied, summary.Skipped)
-		if summary.Skipped == 0 {
+		log.Infof("Applied: %d/%d, Ready: %d/%d, Waiting for dependencies: %d", len(summary.Applied), summary.Total(), len(summary.Ready), summary.Total(), len(summary.WaitingForDeps))
+		if len(summary.Ready) == summary.Total() {
 			return nil
 		}
 		select {

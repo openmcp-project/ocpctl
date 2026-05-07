@@ -10,9 +10,16 @@ type contextKey struct{}
 
 type Logger = *zap.SugaredLogger
 
-func NewLogger() Logger {
-	logger, _ := zap.NewDevelopment()
-	return logger.Sugar()
+func NewLogger(verbose bool) (Logger, error) {
+	cfg := zap.NewDevelopmentConfig()
+	if !verbose {
+		cfg.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+	}
+	logger, err := cfg.Build()
+	if err != nil {
+		return nil, err
+	}
+	return logger.Sugar(), nil
 }
 
 func IntoContext(ctx context.Context, log Logger) context.Context {

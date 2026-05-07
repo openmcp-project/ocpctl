@@ -3,6 +3,7 @@ package platform
 import (
 	"context"
 
+	"github.com/openmcp-project/ocpctl/pkg/clusters"
 	"github.com/openmcp-project/ocpctl/pkg/resources"
 	"github.com/openmcp-project/openmcp-operator/api/clusters/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -25,8 +26,14 @@ func PlatformCluster(environment string, ns *corev1.Namespace, deployment *appsv
 	return &resources.Resource{
 		Object:       cluster,
 		Dependencies: []client.Object{deployment},
+		ReadyFn: func(ctx context.Context) (bool, error) {
+			if cluster.Status.ObservedGeneration != cluster.Generation {
+				return false, nil
+			}
+			return cluster.Status.Phase == v1alpha1.CLUSTER_PHASE_READY, nil
+		},
 		MutateFn: func(_ context.Context) error {
-			metav1.SetMetaDataAnnotation(&cluster.ObjectMeta, "kind.clusters.openmcp.cloud/name", environment+"-platform")
+			metav1.SetMetaDataAnnotation(&cluster.ObjectMeta, "kind.clusters.openmcp.cloud/name", clusters.PlatformClusterName(environment))
 			cluster.Spec = v1alpha1.ClusterSpec{
 				Kubernetes: v1alpha1.K8sConfiguration{},
 				Profile:    "kind",

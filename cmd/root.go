@@ -18,11 +18,10 @@ var rootCmd = &cobra.Command{
 	Long:  `ocpctl is a CLI tool for running local OpenControlPlane environments in kind clusters, for local development or CI.`,
 }
 
+var verbose bool
+
 func Execute() {
 	ctx := ctrl.SetupSignalHandler()
-
-	logger := logging.NewLogger()
-	ctx = logging.IntoContext(ctx, logger)
 
 	err := rootCmd.ExecuteContext(ctx)
 	if err != nil {
@@ -31,6 +30,15 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "enable debug logging")
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		logger, err := logging.NewLogger(verbose)
+		if err != nil {
+			return fmt.Errorf("creating logger: %w", err)
+		}
+		cmd.SetContext(logging.IntoContext(cmd.Context(), logger))
+		return nil
+	}
 	rootCmd.AddCommand(environments.NewEnvironmentsCmd())
 	rootCmd.AddCommand(cmdversion.NewVersionCmd())
 	rootCmd.Version = version.Version()
