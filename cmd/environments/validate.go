@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// 36 allows UUIDs (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).
 const maxEnvironmentNameLength = 36
 
 var validEnvironmentName = regexp.MustCompile(`^[a-z0-9.-]+$`)
