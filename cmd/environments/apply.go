@@ -14,7 +14,7 @@ func newApplyCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "apply <name>",
 		Short: "Create or update an environment",
-		Args:  cobra.ExactArgs(1),
+		Args:  validatedNameArg,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			name := args[0]
