@@ -15,9 +15,10 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "ocpctl",
-	Short: "Run local OpenControlPlane environments in kind clusters",
-	Long:  `ocpctl is a CLI tool for running local OpenControlPlane environments in kind clusters, for local development or CI.`,
+	Use:          "ocpctl",
+	Short:        "Run local OpenControlPlane environments in kind clusters",
+	Long:         `ocpctl is a CLI tool for running local OpenControlPlane environments in kind clusters, for local development or CI.`,
+	SilenceUsage: true,
 }
 
 var verbose bool
