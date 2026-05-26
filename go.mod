@@ -3,7 +3,7 @@ module github.com/openmcp-project/ocpctl
 go 1.26.2
 
 require (
-	github.com/openmcp-project/cluster-provider-kind v0.3.1
+	github.com/openmcp-project/cluster-provider-kind v0.4.0
 	github.com/openmcp-project/openmcp-operator/api v0.20.0
 	github.com/spf13/cobra v1.10.2
 	go.uber.org/zap v1.28.0
