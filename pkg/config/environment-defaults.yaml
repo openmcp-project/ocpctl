@@ -8,7 +8,7 @@ spec:
   clusterProviders:
     - name: kind
       # renovate: datasource=docker depName=ghcr.io/openmcp-project/images/cluster-provider-kind
-      image: ghcr.io/openmcp-project/images/cluster-provider-kind:v0.3.1
+      image: ghcr.io/openmcp-project/images/cluster-provider-kind:v0.4.0
   serviceProviders:
     - name: crossplane
       # renovate: datasource=docker depName=ghcr.io/openmcp-project/images/service-provider-crossplane
