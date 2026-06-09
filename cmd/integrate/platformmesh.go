@@ -23,7 +23,9 @@ Runs all steps idempotently — already-completed steps are skipped automaticall
 
 Required:
   --kcp-kubeconfig   Path to the KCP admin kubeconfig (e.g. ~/.../kcp/admin.kubeconfig)
-  --environment      Name of the ocpctl environment (e.g. "local")
+
+Optional:
+  --environment      Name of the ocpctl environment (default: "local")
 
 Steps performed:
   Phase A:
@@ -42,9 +44,6 @@ Steps performed:
 			if kcpKubeconfig == "" {
 				return fmt.Errorf("--kcp-kubeconfig is required")
 			}
-			if environment == "" {
-				return fmt.Errorf("--environment is required")
-			}
 			return integratepkg.Run(cmd.Context(), integratepkg.Options{
 				KCPKubeconfig: kcpKubeconfig,
 				Environment:   environment,
@@ -53,7 +52,7 @@ Steps performed:
 	}
 
 	cmd.Flags().StringVar(&kcpKubeconfig, "kcp-kubeconfig", "", "path to the KCP admin kubeconfig")
-	cmd.Flags().StringVar(&environment, "environment", "", "name of the ocpctl environment (e.g. \"local\")")
+	cmd.Flags().StringVar(&environment, "environment", "local", "name of the ocpctl environment")
 
 	return cmd
 }

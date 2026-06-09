@@ -1,5 +1,5 @@
-// Package platformmesh implements the Platform Mesh integration steps described
-// in PLATFORM_MESH_INTEGRATION.md (Option B: separate kind clusters).
+// Package platformmesh integrates an OpenControlPlane environment with a
+// Platform Mesh KCP instance (Option B: separate kind clusters).
 package platformmesh
 
 import (
@@ -275,10 +275,7 @@ func step6KubeconfigSecret(ctx context.Context, kcpKubeconfig, platformCtx, kcpS
 	if err != nil {
 		return fmt.Errorf("reading kcp kubeconfig: %w", err)
 	}
-	rewritten := strings.ReplaceAll(string(raw),
-		"https://localhost:8443",
-		fmt.Sprintf("https://localhost:%s", port),
-	)
+	rewritten := rewriteKubeconfigServer(string(raw), port)
 
 	tmp, err := os.CreateTemp("", "kcp-kubeconfig-*.yaml")
 	if err != nil {
@@ -535,6 +532,16 @@ spec:
 // ---------------------------------------------------------------------------
 // Helpers — thin wrappers around kubectl / helm
 // ---------------------------------------------------------------------------
+
+// rewriteKubeconfigServer replaces the KCP server address in a kubeconfig so
+// the syncagent pod can reach KCP via the Traefik nodePort instead of the
+// local port-forward address (https://localhost:8443).
+func rewriteKubeconfigServer(kubeconfig, nodePort string) string {
+	return strings.ReplaceAll(kubeconfig,
+		"https://localhost:8443",
+		fmt.Sprintf("https://localhost:%s", nodePort),
+	)
+}
 
 // kubectlOutput runs kubectl and returns stdout.
 func kubectlOutput(ctx context.Context, kubeconfig, contextOrServer string, args ...string) ([]byte, error) {
