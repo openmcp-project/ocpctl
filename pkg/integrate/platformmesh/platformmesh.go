@@ -7,11 +7,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
 
 	"github.com/openmcp-project/ocpctl/pkg/logging"
+	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/yaml"
 )
 
@@ -29,21 +31,26 @@ func Run(ctx context.Context, opts Options) error {
 	log := logging.FromContext(ctx)
 
 	platformCtx := "kind-" + opts.Environment + "-platform"
-	kcpServer := "https://localhost:8443"
+
+	kcpServer, err := kcpServerFromKubeconfig(opts.KCPKubeconfig)
+	if err != nil {
+		return fmt.Errorf("reading KCP server from kubeconfig: %w", err)
+	}
 
 	log.Infof("Starting Platform Mesh integration (Option B)")
 	log.Infof("  KCP kubeconfig : %s", opts.KCPKubeconfig)
+	log.Infof("  KCP server     : %s", kcpServer)
 	log.Infof("  Platform cluster: %s", platformCtx)
 
 	steps := []step{
 		{name: "Step 1: Create provider workspace", fn: func() error {
-			return step1ProviderWorkspace(ctx, opts.KCPKubeconfig)
+			return step1ProviderWorkspace(ctx, opts.KCPKubeconfig, kcpServer)
 		}},
 		{name: "Step 2: Create APIExport", fn: func() error {
-			return step2APIExport(ctx, opts.KCPKubeconfig)
+			return step2APIExport(ctx, opts.KCPKubeconfig, kcpServer)
 		}},
 		{name: "Step 3: Grant bind permissions", fn: func() error {
-			return step3BindPermissions(ctx, opts.KCPKubeconfig)
+			return step3BindPermissions(ctx, opts.KCPKubeconfig, kcpServer)
 		}},
 		{name: "Step 4: Copy openmcp CRDs to platform cluster", fn: func() error {
 			return step4CopyCRDs(ctx, opts.Environment, platformCtx)
@@ -89,7 +96,7 @@ type step struct {
 // Step 1 — Create provider workspace
 // ---------------------------------------------------------------------------
 
-func step1ProviderWorkspace(ctx context.Context, kcpKubeconfig string) error {
+func step1ProviderWorkspace(ctx context.Context, kcpKubeconfig, kcpServer string) error {
 	// create-workspace is a kubectl plugin; global flags must come AFTER the
 	// plugin name, so --kubeconfig can't be prepended. Pass via KUBECONFIG env var.
 	// We target root:providers explicitly with --server so the workspace type
@@ -97,7 +104,7 @@ func step1ProviderWorkspace(ctx context.Context, kcpKubeconfig string) error {
 	// regardless of which workspace the kubeconfig's current context points to.
 	cmd := exec.CommandContext(ctx, "kubectl",
 		"create-workspace", "openmcp-provider",
-		"--server=https://localhost:8443/clusters/root:providers",
+		"--server="+kcpServer+"/clusters/root:providers",
 		"--type=root:provider",
 		"--ignore-existing",
 	)
@@ -111,8 +118,8 @@ func step1ProviderWorkspace(ctx context.Context, kcpKubeconfig string) error {
 // Step 2 — Create APIExport
 // ---------------------------------------------------------------------------
 
-func step2APIExport(ctx context.Context, kcpKubeconfig string) error {
-	const providerServer = "https://localhost:8443/clusters/root:providers:openmcp-provider"
+func step2APIExport(ctx context.Context, kcpKubeconfig, kcpServer string) error {
+	providerServer := kcpServer + "/clusters/root:providers:openmcp-provider"
 	manifest := `
 apiVersion: apis.kcp.io/v1alpha1
 kind: APIExport
@@ -127,8 +134,8 @@ spec: {}
 // Step 3 — Grant bind permissions
 // ---------------------------------------------------------------------------
 
-func step3BindPermissions(ctx context.Context, kcpKubeconfig string) error {
-	const providerServer = "https://localhost:8443/clusters/root:providers:openmcp-provider"
+func step3BindPermissions(ctx context.Context, kcpKubeconfig, kcpServer string) error {
+	providerServer := kcpServer + "/clusters/root:providers:openmcp-provider"
 	manifest := `
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -275,7 +282,7 @@ func step6KubeconfigSecret(ctx context.Context, kcpKubeconfig, platformCtx, kcpS
 	if err != nil {
 		return fmt.Errorf("reading kcp kubeconfig: %w", err)
 	}
-	rewritten := rewriteKubeconfigServer(string(raw), port)
+	rewritten := rewriteKubeconfigServer(string(raw), kcpServer, port)
 
 	tmp, err := os.CreateTemp("", "kcp-kubeconfig-*.yaml")
 	if err != nil {
@@ -433,7 +440,7 @@ spec:
 // ---------------------------------------------------------------------------
 
 func step9ProviderMetadata(ctx context.Context, kcpKubeconfig, kcpServer string) error {
-	const providerServer = "https://localhost:8443/clusters/root:providers:openmcp-provider"
+	providerServer := kcpServer + "/clusters/root:providers:openmcp-provider"
 
 	// Label the APIExport (idempotent — label apply is safe to re-run).
 	if err := kubectlRaw(ctx, kcpKubeconfig, "",
@@ -484,7 +491,7 @@ spec:
 // ---------------------------------------------------------------------------
 
 func step10ContentConfiguration(ctx context.Context, kcpKubeconfig, kcpServer string) error {
-	const systemServer = "https://localhost:8443/clusters/root:platform-mesh-system"
+	systemServer := kcpServer + "/clusters/root:platform-mesh-system"
 
 	manifest := `
 apiVersion: ui.platform-mesh.io/v1alpha1
@@ -535,12 +542,53 @@ spec:
 
 // rewriteKubeconfigServer replaces the KCP server address in a kubeconfig so
 // the syncagent pod can reach KCP via the Traefik nodePort instead of the
-// local port-forward address (https://localhost:8443).
-func rewriteKubeconfigServer(kubeconfig, nodePort string) string {
-	return strings.ReplaceAll(kubeconfig,
-		"https://localhost:8443",
-		fmt.Sprintf("https://localhost:%s", nodePort),
-	)
+// local port-forward address.
+func rewriteKubeconfigServer(kubeconfig, oldServer, nodePort string) string {
+	u, err := url.Parse(oldServer)
+	if err != nil {
+		u = &url.URL{Scheme: "https", Host: "localhost:8443"}
+	}
+	u.Host = fmt.Sprintf("%s:%s", hostWithoutPort(u.Host), nodePort)
+	return strings.ReplaceAll(kubeconfig, oldServer, u.String())
+}
+
+// hostWithoutPort strips the port from a host:port string.
+func hostWithoutPort(hostport string) string {
+	if idx := strings.LastIndex(hostport, ":"); idx != -1 {
+		return hostport[:idx]
+	}
+	return hostport
+}
+
+// kcpServerFromKubeconfig reads the server URL for the current context's
+// cluster from a kubeconfig file.
+func kcpServerFromKubeconfig(kubeconfigPath string) (string, error) {
+	cfg, err := clientcmd.LoadFromFile(kubeconfigPath)
+	if err != nil {
+		return "", fmt.Errorf("loading kubeconfig: %w", err)
+	}
+	currentContext := cfg.CurrentContext
+	if currentContext == "" {
+		return "", fmt.Errorf("kubeconfig has no current-context set")
+	}
+	ctx, ok := cfg.Contexts[currentContext]
+	if !ok {
+		return "", fmt.Errorf("context %q not found in kubeconfig", currentContext)
+	}
+	cluster, ok := cfg.Clusters[ctx.Cluster]
+	if !ok {
+		return "", fmt.Errorf("cluster %q not found in kubeconfig", ctx.Cluster)
+	}
+	if cluster.Server == "" {
+		return "", fmt.Errorf("cluster %q has no server URL", ctx.Cluster)
+	}
+	// Strip any path component — we want just scheme+host as the base URL.
+	u, err := url.Parse(cluster.Server)
+	if err != nil {
+		return "", fmt.Errorf("parsing server URL %q: %w", cluster.Server, err)
+	}
+	u.Path = ""
+	return u.String(), nil
 }
 
 // kubectlOutput runs kubectl and returns stdout.

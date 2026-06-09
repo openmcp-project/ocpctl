@@ -1,6 +1,7 @@
 package platformmesh
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -123,8 +124,9 @@ func TestStripCRDMetadataInvalidYAML(t *testing.T) {
 
 func TestRewriteKubeconfigServer(t *testing.T) {
 	tests := []struct {
-		name       string
+		name      string
 		kubeconfig string
+		oldServer  string
 		nodePort   string
 		wantOld    string
 		wantNew    string
@@ -137,9 +139,10 @@ clusters:
     server: https://localhost:8443
   name: kcp
 `,
-			nodePort: "32443",
-			wantOld:  "https://localhost:8443",
-			wantNew:  "https://localhost:32443",
+			oldServer: "https://localhost:8443",
+			nodePort:  "32443",
+			wantOld:   "https://localhost:8443",
+			wantNew:   "https://localhost:32443",
 		},
 		{
 			name: "rewrites all occurrences",
@@ -150,9 +153,10 @@ clusters:
 - cluster:
     server: https://localhost:8443
 `,
-			nodePort: "30001",
-			wantOld:  "https://localhost:8443",
-			wantNew:  "https://localhost:30001",
+			oldServer: "https://localhost:8443",
+			nodePort:  "30001",
+			wantOld:   "https://localhost:8443",
+			wantNew:   "https://localhost:30001",
 		},
 		{
 			name: "no match leaves content unchanged",
@@ -161,20 +165,110 @@ clusters:
 - cluster:
     server: https://some-other-host:6443
 `,
-			nodePort: "32443",
-			wantOld:  "",
-			wantNew:  "https://some-other-host:6443",
+			oldServer: "https://localhost:8443",
+			nodePort:  "32443",
+			wantOld:   "",
+			wantNew:   "https://some-other-host:6443",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := rewriteKubeconfigServer(tt.kubeconfig, tt.nodePort)
+			got := rewriteKubeconfigServer(tt.kubeconfig, tt.oldServer, tt.nodePort)
 			if tt.wantOld != "" && strings.Contains(got, tt.wantOld) {
 				t.Errorf("old server address %q still present in output", tt.wantOld)
 			}
 			if !strings.Contains(got, tt.wantNew) {
 				t.Errorf("expected %q in output, got:\n%s", tt.wantNew, got)
+			}
+		})
+	}
+}
+
+func TestKCPServerFromKubeconfig(t *testing.T) {
+	tests := []struct {
+		name        string
+		kubeconfig  string
+		wantServer  string
+		wantErrFrag string
+	}{
+		{
+			name: "reads server from current context",
+			kubeconfig: `
+apiVersion: v1
+kind: Config
+current-context: kcp
+contexts:
+- context:
+    cluster: kcp-cluster
+    user: admin
+  name: kcp
+clusters:
+- cluster:
+    server: https://localhost:8443
+  name: kcp-cluster
+users:
+- name: admin
+`,
+			wantServer: "https://localhost:8443",
+		},
+		{
+			name: "strips path from server URL",
+			kubeconfig: `
+apiVersion: v1
+kind: Config
+current-context: kcp
+contexts:
+- context:
+    cluster: kcp-cluster
+    user: admin
+  name: kcp
+clusters:
+- cluster:
+    server: https://localhost:8443/clusters/root
+  name: kcp-cluster
+users:
+- name: admin
+`,
+			wantServer: "https://localhost:8443",
+		},
+		{
+			name: "no current-context returns error",
+			kubeconfig: `
+apiVersion: v1
+kind: Config
+contexts: []
+clusters: []
+users: []
+`,
+			wantErrFrag: "no current-context",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f, err := os.CreateTemp("", "kubeconfig-*.yaml")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = os.Remove(f.Name()) }()
+			if _, err := f.WriteString(tt.kubeconfig); err != nil {
+				t.Fatal(err)
+			}
+			_ = f.Close()
+
+			got, err := kcpServerFromKubeconfig(f.Name())
+			if tt.wantErrFrag != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErrFrag) {
+					t.Errorf("expected error containing %q, got: %v", tt.wantErrFrag, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.wantServer {
+				t.Errorf("got %q, want %q", got, tt.wantServer)
 			}
 		})
 	}
