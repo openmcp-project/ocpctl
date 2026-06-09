@@ -1,5 +1,5 @@
 // Package platformmesh integrates an OpenControlPlane environment with a
-// Platform Mesh KCP instance (Option B: separate kind clusters).
+// Platform Mesh KCP instance using separate kind clusters.
 package platformmesh
 
 import (
@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"strings"
 
+	opcrdfs "github.com/openmcp-project/openmcp-operator/api/crds"
 	"github.com/openmcp-project/ocpctl/pkg/logging"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/yaml"
@@ -37,7 +38,7 @@ func Run(ctx context.Context, opts Options) error {
 		return fmt.Errorf("reading KCP server from kubeconfig: %w", err)
 	}
 
-	log.Infof("Starting Platform Mesh integration (Option B)")
+	log.Infof("Starting Platform Mesh integration")
 	log.Infof("  KCP kubeconfig : %s", opts.KCPKubeconfig)
 	log.Infof("  KCP server     : %s", kcpServer)
 	log.Infof("  Platform cluster: %s", platformCtx)
@@ -52,13 +53,13 @@ func Run(ctx context.Context, opts Options) error {
 		{name: "Step 3: Grant bind permissions", fn: func() error {
 			return step3BindPermissions(ctx, opts.KCPKubeconfig, kcpServer)
 		}},
-		{name: "Step 4: Copy openmcp CRDs to platform cluster", fn: func() error {
-			return step4CopyCRDs(ctx, opts.Environment, platformCtx)
+		{name: "Step 4: Apply openmcp CRDs to platform cluster", fn: func() error {
+			return step4ApplyCRDs(ctx, opts.Environment, platformCtx)
 		}},
 		{name: "Step 5: Create open-mcp-provider namespace", fn: func() error {
 			return step5Namespace(ctx, platformCtx)
 		}},
-		{name: "Step 6: Create KCP kubeconfig secret (Option B)", fn: func() error {
+		{name: "Step 6: Create KCP kubeconfig secret", fn: func() error {
 			return step6KubeconfigSecret(ctx, opts.KCPKubeconfig, platformCtx, kcpServer)
 		}},
 		{name: "Step 7: Install api-syncagent", fn: func() error {
@@ -163,30 +164,51 @@ roleRef:
 }
 
 // ---------------------------------------------------------------------------
-// Step 4 — Copy openmcp CRDs to platform cluster
+// Step 4 — Apply openmcp CRDs to platform cluster
 // ---------------------------------------------------------------------------
 
-var openmcpCRDs = []struct{ name, context string }{
-	{"fluxes.flux.services.openmcp.cloud", ""},
-	{"managedcontrolplanev2s.core.openmcp.cloud", ""},
+// crdFromEmbeddedFS maps a CRD name to its filename in opcrdfs.CRDFS.
+var crdFromEmbeddedFS = map[string]string{
+	"managedcontrolplanev2s.core.openmcp.cloud": "manifests/core.openmcp.cloud_managedcontrolplanev2s.yaml",
 }
 
-func step4CopyCRDs(ctx context.Context, environment, platformCtx string) error {
+// crdFromOnboarding lists CRDs that are only available in the onboarding cluster
+// (not shipped in any Go module dependency).
+var crdFromOnboarding = []string{
+	"fluxes.flux.services.openmcp.cloud",
+}
+
+// step4ApplyCRDs applies the openmcp CRDs to the platform cluster.
+// CRDs bundled in the openmcp-operator/api module are applied directly from
+// the embedded FS; CRDs only available in the onboarding cluster are copied
+// from there.
+func step4ApplyCRDs(ctx context.Context, environment, platformCtx string) error {
+	// Apply CRDs from the embedded FS in openmcp-operator/api.
+	for crdName, path := range crdFromEmbeddedFS {
+		data, err := opcrdfs.CRDFS.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("reading embedded CRD %s: %w", crdName, err)
+		}
+		if err := kubectlApplyBytesServerSide(ctx, "", platformCtx, data); err != nil {
+			return fmt.Errorf("applying CRD %s: %w", crdName, err)
+		}
+	}
+
+	// Apply CRDs sourced from the onboarding cluster.
 	onboardingCtx := "kind-" + environment + "-onboarding"
-	for _, crd := range openmcpCRDs {
+	for _, crdName := range crdFromOnboarding {
 		yamlBytes, err := kubectlOutput(ctx, "", onboardingCtx,
-			"get", "crd", crd.name, "-o", "yaml",
+			"get", "crd", crdName, "-o", "yaml",
 		)
 		if err != nil {
-			return fmt.Errorf("getting CRD %s from %s: %w", crd.name, onboardingCtx, err)
+			return fmt.Errorf("getting CRD %s from %s: %w", crdName, onboardingCtx, err)
 		}
-		// Strip server-side fields that cause conflicts when re-applying to another cluster.
 		cleaned, err := stripCRDMetadata(yamlBytes)
 		if err != nil {
-			return fmt.Errorf("stripping metadata from CRD %s: %w", crd.name, err)
+			return fmt.Errorf("stripping metadata from CRD %s: %w", crdName, err)
 		}
 		if err := kubectlApplyBytesServerSide(ctx, "", platformCtx, cleaned); err != nil {
-			return fmt.Errorf("applying CRD %s to %s: %w", crd.name, platformCtx, err)
+			return fmt.Errorf("applying CRD %s to %s: %w", crdName, platformCtx, err)
 		}
 	}
 	return nil
