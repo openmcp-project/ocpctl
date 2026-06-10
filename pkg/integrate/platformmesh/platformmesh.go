@@ -12,7 +12,6 @@ import (
 	"os/exec"
 	"strings"
 
-	opcrdfs "github.com/openmcp-project/openmcp-operator/api/crds"
 	"github.com/openmcp-project/ocpctl/pkg/logging"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/yaml"
@@ -98,21 +97,60 @@ type step struct {
 // ---------------------------------------------------------------------------
 
 func step1ProviderWorkspace(ctx context.Context, kcpKubeconfig, kcpServer string) error {
-	// create-workspace is a kubectl plugin; global flags must come AFTER the
-	// plugin name, so --kubeconfig can't be prepended. Pass via KUBECONFIG env var.
-	// We target root:providers explicitly with --server so the workspace type
-	// constraint (provider workspaces must live under root:providers) is satisfied
-	// regardless of which workspace the kubeconfig's current context points to.
-	cmd := exec.CommandContext(ctx, "kubectl",
+	// create-workspace is a kubectl plugin that does not accept --kubeconfig as a
+	// flag; credentials must come via the KUBECONFIG env var.
+	//
+	// Passing --server alongside KUBECONFIG causes kubectl to use the given server
+	// URL but drop the credentials from the kubeconfig context, resulting in an
+	// unauthenticated request (User ""). Instead, navigate using `kubectl kcp
+	// workspace use` so that create-workspace inherits both the server and the
+	// credentials from the kubeconfig context.
+	//
+	// The `provider` workspace type requires its parent to be of type `providers`
+	// (limitAllowedParents), so we ensure root:providers exists first.
+	env := append(os.Environ(), "KUBECONFIG="+kcpKubeconfig)
+
+	// Step 1a: navigate to root and create the `providers` parent workspace.
+	for _, useArg := range []string{":root"} {
+		use := exec.CommandContext(ctx, "kubectl", "kcp", "workspace", "use", useArg)
+		use.Env = env
+		use.Stdout = os.Stdout
+		use.Stderr = os.Stderr
+		if err := use.Run(); err != nil {
+			return fmt.Errorf("switching to %s workspace: %w", useArg, err)
+		}
+	}
+
+	createProviders := exec.CommandContext(ctx, "kubectl",
+		"create-workspace", "providers",
+		"--type=root:providers",
+		"--ignore-existing",
+	)
+	createProviders.Env = env
+	createProviders.Stdout = os.Stdout
+	createProviders.Stderr = os.Stderr
+	if err := createProviders.Run(); err != nil {
+		return fmt.Errorf("creating providers workspace: %w", err)
+	}
+
+	// Step 1b: navigate into root:providers and create the openmcp-provider workspace.
+	use := exec.CommandContext(ctx, "kubectl", "kcp", "workspace", "use", ":root:providers")
+	use.Env = env
+	use.Stdout = os.Stdout
+	use.Stderr = os.Stderr
+	if err := use.Run(); err != nil {
+		return fmt.Errorf("switching to root:providers workspace: %w", err)
+	}
+
+	create := exec.CommandContext(ctx, "kubectl",
 		"create-workspace", "openmcp-provider",
-		"--server="+kcpServer+"/clusters/root:providers",
 		"--type=root:provider",
 		"--ignore-existing",
 	)
-	cmd.Env = append(os.Environ(), "KUBECONFIG="+kcpKubeconfig)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	create.Env = env
+	create.Stdout = os.Stdout
+	create.Stderr = os.Stderr
+	return create.Run()
 }
 
 // ---------------------------------------------------------------------------
@@ -167,34 +205,16 @@ roleRef:
 // Step 4 — Apply openmcp CRDs to platform cluster
 // ---------------------------------------------------------------------------
 
-// crdFromEmbeddedFS maps a CRD name to its filename in opcrdfs.CRDFS.
-var crdFromEmbeddedFS = map[string]string{
-	"managedcontrolplanev2s.core.openmcp.cloud": "manifests/core.openmcp.cloud_managedcontrolplanev2s.yaml",
-}
-
-// crdFromOnboarding lists CRDs that are only available in the onboarding cluster
-// (not shipped in any Go module dependency).
+// crdFromOnboarding lists CRDs to copy from the onboarding cluster to the platform cluster.
+// These are installed on the onboarding cluster by their respective operators at startup.
 var crdFromOnboarding = []string{
-	"fluxes.flux.services.openmcp.cloud",
+	"controlplanes.core.orchestrate.cloud.sap",
+	"fluxes.flux.services.open-control-plane.io",
 }
 
-// step4ApplyCRDs applies the openmcp CRDs to the platform cluster.
-// CRDs bundled in the openmcp-operator/api module are applied directly from
-// the embedded FS; CRDs only available in the onboarding cluster are copied
-// from there.
+// step4ApplyCRDs applies the openmcp CRDs to the platform cluster by copying
+// them from the onboarding cluster where the operators have already installed them.
 func step4ApplyCRDs(ctx context.Context, environment, platformCtx string) error {
-	// Apply CRDs from the embedded FS in openmcp-operator/api.
-	for crdName, path := range crdFromEmbeddedFS {
-		data, err := opcrdfs.CRDFS.ReadFile(path)
-		if err != nil {
-			return fmt.Errorf("reading embedded CRD %s: %w", crdName, err)
-		}
-		if err := kubectlApplyBytesServerSide(ctx, "", platformCtx, data); err != nil {
-			return fmt.Errorf("applying CRD %s: %w", crdName, err)
-		}
-	}
-
-	// Apply CRDs sourced from the onboarding cluster.
 	onboardingCtx := "kind-" + environment + "-onboarding"
 	for _, crdName := range crdFromOnboarding {
 		yamlBytes, err := kubectlOutput(ctx, "", onboardingCtx,
@@ -402,10 +422,10 @@ kind: ClusterRole
 metadata:
   name: api-syncagent-openmcp
 rules:
-  - apiGroups: ["core.openmcp.cloud"]
-    resources: ["managedcontrolplanev2s", "managedcontrolplanev2s/status"]
+  - apiGroups: ["core.orchestrate.cloud.sap"]
+    resources: ["controlplanes", "controlplanes/status"]
     verbs: ["*"]
-  - apiGroups: ["flux.services.openmcp.cloud"]
+  - apiGroups: ["flux.services.open-control-plane.io"]
     resources: ["fluxes", "fluxes/status"]
     verbs: ["*"]
   - apiGroups: [""]
@@ -433,12 +453,12 @@ roleRef:
 apiVersion: syncagent.kcp.io/v1alpha1
 kind: PublishedResource
 metadata:
-  name: managed-control-plane
+  name: control-plane
 spec:
   resource:
-    kind: ManagedControlPlaneV2
-    apiGroup: core.openmcp.cloud
-    version: v2alpha1
+    kind: ControlPlane
+    apiGroup: core.orchestrate.cloud.sap
+    version: v1beta1
 ---
 apiVersion: syncagent.kcp.io/v1alpha1
 kind: PublishedResource
@@ -447,7 +467,7 @@ metadata:
 spec:
   resource:
     kind: Flux
-    apiGroup: flux.services.openmcp.cloud
+    apiGroup: flux.services.open-control-plane.io
     version: v1alpha1
 `
 	if err := kubectlApplyContext(ctx, platformCtx, publishedResources); err != nil {
