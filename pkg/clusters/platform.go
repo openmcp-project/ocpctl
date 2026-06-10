@@ -2,6 +2,7 @@ package clusters
 
 import (
 	"fmt"
+	"strings"
 
 	clustersv1alpha1 "github.com/openmcp-project/openmcp-operator/api/clusters/v1alpha1"
 	providerv1alpha1 "github.com/openmcp-project/openmcp-operator/api/provider/v1alpha1"
@@ -29,7 +30,7 @@ func EnsurePlatformCluster(environment string) (bool, error) {
 		}
 	}
 
-	return true, provider.Create(name, cluster.CreateWithV1Alpha4Config(&v1alpha4.Cluster{
+	err = provider.Create(name, cluster.CreateWithV1Alpha4Config(&v1alpha4.Cluster{
 		Nodes: []v1alpha4.Node{
 			{
 				Role: v1alpha4.ControlPlaneRole,
@@ -42,6 +43,18 @@ func EnsurePlatformCluster(environment string) (bool, error) {
 			},
 		},
 	}))
+	if err != nil {
+		if strings.Contains(err.Error(), "could not find a log line that matches") {
+			return false, fmt.Errorf("kind cluster %q failed to start: inotify resource limits are too low.\n"+
+				"Fix with:\n"+
+				"  sudo sysctl fs.inotify.max_user_watches=524288\n"+
+				"  sudo sysctl fs.inotify.max_user_instances=512\n"+
+				"See https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files\n"+
+				"Original error: %w", name, err)
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 // PlatformClusterClient returns a controller-runtime client for the platform cluster of the given environment.
