@@ -557,7 +557,7 @@ spec:
                 "order": 800,
                 "label": "OpenMCP",
                 "icon": "product",
-                "url": "https://{context.organization}.portal.localhost:8443/ui/openmcp/#/",
+                "url": "https://{context.organization}.portal.localhost:4200/",
                 "context": {
                   "accountId": ":core_platform-mesh_io_accountId"
                 }
