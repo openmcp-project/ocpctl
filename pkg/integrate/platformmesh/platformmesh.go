@@ -207,31 +207,46 @@ roleRef:
 
 // crdFromOnboarding lists CRDs to copy from the onboarding cluster to the platform cluster.
 // These are installed on the onboarding cluster by their respective operators at startup.
-var crdFromOnboarding = []string{
-	"controlplanes.core.orchestrate.cloud.sap",
-	"fluxes.flux.services.open-control-plane.io",
+// The bool indicates whether the CRD is required; optional CRDs are skipped when absent.
+var crdFromOnboarding = []struct {
+	name     string
+	required bool
+}{
+	{"controlplanes.core.open-control-plane.io", true},
+	{"fluxes.flux.services.open-control-plane.io", false},
 }
 
 // step4ApplyCRDs applies the openmcp CRDs to the platform cluster by copying
 // them from the onboarding cluster where the operators have already installed them.
+// Optional CRDs are skipped when not present on the onboarding cluster.
 func step4ApplyCRDs(ctx context.Context, environment, platformCtx string) error {
+	log := logging.FromContext(ctx)
 	onboardingCtx := "kind-" + environment + "-onboarding"
-	for _, crdName := range crdFromOnboarding {
+	for _, crd := range crdFromOnboarding {
 		yamlBytes, err := kubectlOutput(ctx, "", onboardingCtx,
-			"get", "crd", crdName, "-o", "yaml",
+			"get", "crd", crd.name, "-o", "yaml",
 		)
 		if err != nil {
-			return fmt.Errorf("getting CRD %s from %s: %w", crdName, onboardingCtx, err)
+			if !crd.required && isNotFound(err) {
+				log.Infof("  optional CRD %s not found on %s, skipping", crd.name, onboardingCtx)
+				continue
+			}
+			return fmt.Errorf("getting CRD %s from %s: %w", crd.name, onboardingCtx, err)
 		}
 		cleaned, err := stripCRDMetadata(yamlBytes)
 		if err != nil {
-			return fmt.Errorf("stripping metadata from CRD %s: %w", crdName, err)
+			return fmt.Errorf("stripping metadata from CRD %s: %w", crd.name, err)
 		}
 		if err := kubectlApplyBytesServerSide(ctx, "", platformCtx, cleaned); err != nil {
-			return fmt.Errorf("applying CRD %s to %s: %w", crdName, platformCtx, err)
+			return fmt.Errorf("applying CRD %s to %s: %w", crd.name, platformCtx, err)
 		}
 	}
 	return nil
+}
+
+// isNotFound reports whether an error from kubectlOutput is a Kubernetes NotFound error.
+func isNotFound(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "NotFound")
 }
 
 // stripCRDMetadata removes resourceVersion, uid, generation, and status from
@@ -416,7 +431,25 @@ func step7SyncAgent(ctx context.Context, platformCtx, kcpServer string) error {
 // ---------------------------------------------------------------------------
 
 func step8RBACAndPublishedResources(ctx context.Context, platformCtx string) error {
-	rbac := `
+	log := logging.FromContext(ctx)
+
+	// Determine whether the Flux CRD landed on the platform cluster.
+	_, fluxErr := kubectlOutput(ctx, "", platformCtx,
+		"get", "crd", "fluxes.flux.services.open-control-plane.io", "--ignore-not-found", "-o", "name",
+	)
+	fluxAvailable := fluxErr == nil
+
+	fluxRBACRule := ""
+	if fluxAvailable {
+		fluxRBACRule = `
+  - apiGroups: ["flux.services.open-control-plane.io"]
+    resources: ["fluxes", "fluxes/status"]
+    verbs: ["*"]`
+	} else {
+		log.Info("  Flux CRD not present on platform cluster, skipping Flux RBAC and PublishedResource")
+	}
+
+	rbac := fmt.Sprintf(`
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -424,10 +457,7 @@ metadata:
 rules:
   - apiGroups: ["core.orchestrate.cloud.sap"]
     resources: ["controlplanes", "controlplanes/status"]
-    verbs: ["*"]
-  - apiGroups: ["flux.services.open-control-plane.io"]
-    resources: ["fluxes", "fluxes/status"]
-    verbs: ["*"]
+    verbs: ["*"]%s
   - apiGroups: [""]
     resources: ["namespaces"]
     verbs: ["*"]
@@ -444,7 +474,7 @@ roleRef:
   kind: ClusterRole
   name: api-syncagent-openmcp
   apiGroup: rbac.authorization.k8s.io
-`
+`, fluxRBACRule)
 	if err := kubectlApplyContext(ctx, platformCtx, rbac); err != nil {
 		return fmt.Errorf("applying RBAC: %w", err)
 	}
@@ -459,7 +489,9 @@ spec:
     kind: ControlPlane
     apiGroup: core.orchestrate.cloud.sap
     version: v1beta1
----
+`
+	if fluxAvailable {
+		publishedResources += `---
 apiVersion: syncagent.kcp.io/v1alpha1
 kind: PublishedResource
 metadata:
@@ -470,6 +502,7 @@ spec:
     apiGroup: flux.services.open-control-plane.io
     version: v1alpha1
 `
+	}
 	if err := kubectlApplyContext(ctx, platformCtx, publishedResources); err != nil {
 		return fmt.Errorf("applying PublishedResources: %w", err)
 	}
