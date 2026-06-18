@@ -81,6 +81,12 @@ func applyPlatformResources(ctx context.Context, environment string, cfg *config
 		platform.PlatformCluster(environment, ns, deployment),
 		platform.ClusterProvider(clusterProviderImage, deployment),
 	)
+	for _, sp := range cfg.Spec.ServiceProviders {
+		platformCluster.AddResources(platform.ServiceProvider(sp.Name, sp.Image, deployment))
+	}
+	for _, ps := range cfg.Spec.PlatformServices {
+		platformCluster.AddResources(platform.PlatformService(ps.Name, ps.Image, deployment))
+	}
 
 	manager := &resources.Manager{}
 	manager.AddClusters(platformCluster)
