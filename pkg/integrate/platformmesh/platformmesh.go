@@ -5,15 +5,19 @@ package platformmesh
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/openmcp-project/ocpctl/pkg/logging"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/kind/pkg/cluster"
 	"sigs.k8s.io/yaml"
 )
 
@@ -25,6 +29,84 @@ type Options struct {
 	// the kind cluster "kind-<environment>-platform".
 	Environment string
 }
+
+// cpKindClusterAccessWriterRBAC is applied to kind-platform-mesh.
+// It grants the cp-kind controller-manager OIDC identity permission to write
+// ClusterAccess CRs and their CA Secrets in the graphql-gateway namespace.
+const cpKindClusterAccessWriterRBAC = `
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-provider-kind-writer
+rules:
+  - apiGroups:
+      - gateway.platform-mesh.io
+    resources:
+      - clusteraccesses
+    verbs:
+      - create
+      - get
+      - patch
+      - update
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - create
+      - get
+      - patch
+      - update
+      - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cluster-provider-kind-writer
+  namespace: graphql-gateway
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-provider-kind-writer
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: "system:serviceaccount:cluster-provider-kind:controller-manager"
+`
+
+// gwClusterCreatorRBAC is applied to kind-<env>-platform.
+// It grants the GraphQL Gateway SA OIDC identity permission to create Cluster CRs
+// handled by cluster-provider-kind.
+const gwClusterCreatorRBAC = `
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gql-gateway-cluster-creator
+rules:
+  - apiGroups:
+      - clusters.openmcp.cloud
+    resources:
+      - clusters
+    verbs:
+      - create
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: gql-gateway-cluster-creator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gql-gateway-cluster-creator
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: "system:serviceaccount:platform-mesh-system:kubernetes-graphql-gateway"
+`
 
 // Run executes all integration steps idempotently.
 func Run(ctx context.Context, opts Options) error {
@@ -73,6 +155,21 @@ func Run(ctx context.Context, opts Options) error {
 		{name: "Step 10: Create ContentConfiguration", fn: func() error {
 			return step10ContentConfiguration(ctx, opts.KCPKubeconfig, kcpServer)
 		}},
+		{name: "Step 11: Apply cp-kind ClusterAccess writer RBAC to kind-platform-mesh", fn: func() error {
+			return step11ClusterAccessWriterRBAC(ctx)
+		}},
+		{name: "Step 12: Apply GW SA cluster-creator RBAC to kind-<env>-platform", fn: func() error {
+			return step12GWClusterCreatorRBAC(ctx, platformCtx)
+		}},
+		{name: "Step 13: Create cp-kind credential on kind-platform-mesh", fn: func() error {
+			return step13CpKindCredential(ctx, platformCtx)
+		}},
+		{name: "Step 14: Write platform-mesh CA Secret to kind-platform-mesh", fn: func() error {
+			return step14PlatformMeshCASecret(ctx)
+		}},
+		{name: "Step 15: Write local-platform ClusterAccess to kind-platform-mesh", fn: func() error {
+			return step15LocalPlatformClusterAccess(ctx, opts.Environment)
+		}},
 	}
 
 	for _, s := range steps {
@@ -114,8 +211,8 @@ func step1ProviderWorkspace(ctx context.Context, kcpKubeconfig, kcpServer string
 	for _, useArg := range []string{":root"} {
 		use := exec.CommandContext(ctx, "kubectl", "kcp", "workspace", "use", useArg)
 		use.Env = env
-		use.Stdout = os.Stdout
-		use.Stderr = os.Stderr
+		use.Stdout = newIndentWriter(os.Stdout, subprocessIndent)
+		use.Stderr = newIndentWriter(os.Stderr, subprocessIndent)
 		if err := use.Run(); err != nil {
 			return fmt.Errorf("switching to %s workspace: %w", useArg, err)
 		}
@@ -127,8 +224,8 @@ func step1ProviderWorkspace(ctx context.Context, kcpKubeconfig, kcpServer string
 		"--ignore-existing",
 	)
 	createProviders.Env = env
-	createProviders.Stdout = os.Stdout
-	createProviders.Stderr = os.Stderr
+	createProviders.Stdout = newIndentWriter(os.Stdout, subprocessIndent)
+	createProviders.Stderr = newIndentWriter(os.Stderr, subprocessIndent)
 	if err := createProviders.Run(); err != nil {
 		return fmt.Errorf("creating providers workspace: %w", err)
 	}
@@ -136,8 +233,8 @@ func step1ProviderWorkspace(ctx context.Context, kcpKubeconfig, kcpServer string
 	// Step 1b: navigate into root:providers and create the openmcp-provider workspace.
 	use := exec.CommandContext(ctx, "kubectl", "kcp", "workspace", "use", ":root:providers")
 	use.Env = env
-	use.Stdout = os.Stdout
-	use.Stderr = os.Stderr
+	use.Stdout = newIndentWriter(os.Stdout, subprocessIndent)
+	use.Stderr = newIndentWriter(os.Stderr, subprocessIndent)
 	if err := use.Run(); err != nil {
 		return fmt.Errorf("switching to root:providers workspace: %w", err)
 	}
@@ -148,8 +245,8 @@ func step1ProviderWorkspace(ctx context.Context, kcpKubeconfig, kcpServer string
 		"--ignore-existing",
 	)
 	create.Env = env
-	create.Stdout = os.Stdout
-	create.Stderr = os.Stderr
+	create.Stdout = newIndentWriter(os.Stdout, subprocessIndent)
+	create.Stderr = newIndentWriter(os.Stderr, subprocessIndent)
 	return create.Run()
 }
 
@@ -612,10 +709,321 @@ spec:
 }
 
 // ---------------------------------------------------------------------------
-// Helpers — thin wrappers around kubectl / helm
+// Steps 11-13 — OIDC trust ring
 // ---------------------------------------------------------------------------
 
-// rewriteKubeconfigServer replaces the KCP server address in a kubeconfig so
+// step11ClusterAccessWriterRBAC applies the cp-kind ClusterAccess writer RBAC
+// to kind-platform-mesh.
+func step11ClusterAccessWriterRBAC(ctx context.Context) error {
+	return kubectlApplyContext(ctx, "kind-platform-mesh", cpKindClusterAccessWriterRBAC)
+}
+
+// step12GWClusterCreatorRBAC applies the GW SA cluster-creator RBAC to
+// kind-<env>-platform.
+func step12GWClusterCreatorRBAC(ctx context.Context, platformCtx string) error {
+	return kubectlApplyContext(ctx, platformCtx, gwClusterCreatorRBAC)
+}
+
+// step13CpKindCredential creates a static ServiceAccount + token Secret on
+// kind-platform-mesh for the cp-kind controller-manager, then writes a kubeconfig
+// Secret onto kind-<env>-platform so cp-kind can mount and use it.
+//
+// The token is of type kubernetes.io/service-account-token (non-expiring, signed
+// by kind-platform-mesh's own SA key). No signing key crosses cluster boundaries.
+func step13CpKindCredential(ctx context.Context, platformCtx string) error {
+	log := logging.FromContext(ctx)
+	const (
+		pmContext    = "kind-platform-mesh"
+		saNamespace  = "cluster-provider-kind"
+		saName       = "controller-manager"
+		secretName   = "controller-manager-token"
+		kcfgSecret   = "platform-mesh-kubeconfig"
+	)
+
+	// Ensure the namespace exists.
+	nsManifest := fmt.Sprintf(`apiVersion: v1
+kind: Namespace
+metadata:
+  name: %s
+`, saNamespace)
+	if err := kubectlApplyContext(ctx, pmContext, nsManifest); err != nil {
+		return fmt.Errorf("ensuring namespace %s on %s: %w", saNamespace, pmContext, err)
+	}
+
+	// Create the ServiceAccount.
+	saManifest := fmt.Sprintf(`apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: %s
+  namespace: %s
+`, saName, saNamespace)
+	if err := kubectlApplyContext(ctx, pmContext, saManifest); err != nil {
+		return fmt.Errorf("applying ServiceAccount: %w", err)
+	}
+
+	// Create the static token Secret (type kubernetes.io/service-account-token).
+	// The kube controller manager populates .data.token and .data.ca.crt automatically.
+	tokenSecretManifest := fmt.Sprintf(`apiVersion: v1
+kind: Secret
+metadata:
+  name: %s
+  namespace: %s
+  annotations:
+    kubernetes.io/service-account.name: %s
+type: kubernetes.io/service-account-token
+`, secretName, saNamespace, saName)
+	if err := kubectlApplyContext(ctx, pmContext, tokenSecretManifest); err != nil {
+		return fmt.Errorf("applying token Secret: %w", err)
+	}
+
+	// Wait for the controller manager to populate the token (max 30s).
+	log.Infof("  waiting for token to be populated in %s/%s", saNamespace, secretName)
+	var token string
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		t, err := kubectlOutput(ctx, "", pmContext,
+			"get", "secret", secretName, "-n", saNamespace,
+			"-o", "jsonpath={.data.token}",
+		)
+		if err == nil && len(strings.TrimSpace(string(t))) > 0 {
+			token = strings.TrimSpace(string(t))
+			break
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("token Secret %s/%s was not populated within 30s", saNamespace, secretName)
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(2 * time.Second):
+		}
+	}
+
+	// Get the kind-platform-mesh API server address via the Docker-internal kubeconfig
+	// (internal=true) so the address is reachable from within the
+	// kind-local-platform pod network.
+	provider := cluster.NewProvider()
+	pmKubeconfigRaw, err := provider.KubeConfig("platform-mesh", true)
+	if err != nil {
+		return fmt.Errorf("getting internal kubeconfig for kind-platform-mesh: %w", err)
+	}
+	pmCfg, err := clientcmd.RESTConfigFromKubeConfig([]byte(pmKubeconfigRaw))
+	if err != nil {
+		return fmt.Errorf("parsing internal kubeconfig for kind-platform-mesh: %w", err)
+	}
+	server := pmCfg.Host
+
+	// Build a kubeconfig using the static token.
+	// caData is already base64-encoded (from jsonpath .data.*) — correct for
+	// certificate-authority-data in a kubeconfig.
+	// token is base64-encoded from .data.token — decode it to a plain bearer token.
+	tokenDecoded, err := base64.StdEncoding.DecodeString(token)
+	if err != nil {
+		return fmt.Errorf("decoding token: %w", err)
+	}
+	// Use CA from the kind provider's REST config (already a PEM []byte).
+	caPEM := base64.StdEncoding.EncodeToString(pmCfg.TLSClientConfig.CAData)
+
+	kubeconfig := fmt.Sprintf(`apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    certificate-authority-data: %s
+    server: %s
+  name: platform-mesh
+contexts:
+- context:
+    cluster: platform-mesh
+    user: cp-kind
+  name: platform-mesh
+current-context: platform-mesh
+users:
+- name: cp-kind
+  user:
+    token: %s
+`, caPEM, server, string(tokenDecoded))
+
+	// Base64-encode the kubeconfig for the Secret data field.
+	kcfgB64 := base64.StdEncoding.EncodeToString([]byte(kubeconfig))
+
+	// Write the kubeconfig as a Secret onto kind-<env>-platform so cp-kind can mount it.
+	kcfgSecretManifest := fmt.Sprintf(`apiVersion: v1
+kind: Secret
+metadata:
+  name: %s
+  namespace: %s
+type: Opaque
+data:
+  kubeconfig: %s
+`, kcfgSecret, saNamespace, kcfgB64)
+
+	// Ensure namespace exists on kind-<env>-platform too.
+	if err := kubectlApplyContext(ctx, platformCtx, nsManifest); err != nil {
+		return fmt.Errorf("ensuring namespace %s on %s: %w", saNamespace, platformCtx, err)
+	}
+	if err := kubectlApplyContext(ctx, platformCtx, kcfgSecretManifest); err != nil {
+		return fmt.Errorf("applying kubeconfig Secret to %s: %w", platformCtx, err)
+	}
+
+	log.Infof("  cp-kind kubeconfig Secret %s/%s written to %s", saNamespace, kcfgSecret, platformCtx)
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Step 14 — Write platform-mesh CA Secret to kind-platform-mesh
+// ---------------------------------------------------------------------------
+
+// step14PlatformMeshCASecret extracts the CA certificate from the kind-platform-mesh
+// kubeconfig and writes it as a Secret to kind-platform-mesh so that cp-kind can mount
+// it and verify TLS when calling the platform-mesh API server.
+//
+// Secret: namespace=cluster-provider-kind, name=platform-mesh-ca, key=ca.crt (PEM).
+// The operation is idempotent (kubectl apply).
+func step14PlatformMeshCASecret(ctx context.Context) error {
+	const (
+		kindClusterName = "platform-mesh"
+		secretNamespace = "cluster-provider-kind"
+		secretName      = "platform-mesh-ca"
+		contextName     = "kind-platform-mesh"
+	)
+
+	provider := cluster.NewProvider()
+	kubeconfigRaw, err := provider.KubeConfig(kindClusterName, false)
+	if err != nil {
+		return fmt.Errorf("getting kubeconfig for kind-%s: %w", kindClusterName, err)
+	}
+
+	cfg, err := clientcmd.RESTConfigFromKubeConfig([]byte(kubeconfigRaw))
+	if err != nil {
+		return fmt.Errorf("parsing kubeconfig for kind-%s: %w", kindClusterName, err)
+	}
+
+	caData := cfg.TLSClientConfig.CAData
+	if len(caData) == 0 {
+		return fmt.Errorf("kind-%s kubeconfig has no CA data", kindClusterName)
+	}
+
+	// Ensure the namespace exists before writing the Secret.
+	nsManifest := fmt.Sprintf(`apiVersion: v1
+kind: Namespace
+metadata:
+  name: %s
+`, secretNamespace)
+	if err := kubectlApplyContext(ctx, contextName, nsManifest); err != nil {
+		return fmt.Errorf("ensuring namespace %s: %w", secretNamespace, err)
+	}
+
+	manifest := fmt.Sprintf(`apiVersion: v1
+kind: Secret
+metadata:
+  name: %s
+  namespace: %s
+type: Opaque
+data:
+  ca.crt: %s
+`, secretName, secretNamespace, base64.StdEncoding.EncodeToString(caData))
+
+	return kubectlApplyContext(ctx, contextName, manifest)
+}
+
+// ---------------------------------------------------------------------------
+// Step 15 — Write local-platform ClusterAccess to kind-platform-mesh
+// ---------------------------------------------------------------------------
+
+// step15LocalPlatformClusterAccess writes a ClusterAccess + CA Secret on
+// kind-platform-mesh pointing at kind-<environment>-platform, so the
+// GraphQL Gateway can discover and query the local-platform cluster.
+//
+// cp-kind's reconcileClusterAccess handles this automatically for control-plane
+// clusters it creates, but kind-<env>-platform is created by ocpctl (not by
+// cp-kind), so cp-kind never runs reconcileClusterAccess for it.
+//
+// The ClusterAccess uses a ServiceAccountRef so the gateway generates a
+// short-lived OIDC token instead of a static credential.
+func step15LocalPlatformClusterAccess(ctx context.Context, environment string) error {
+	const (
+		pmContext        = "kind-platform-mesh"
+		caNamespace      = "graphql-gateway"
+		gwNamespace      = "platform-mesh-system"
+		gwServiceAccount = "kubernetes-graphql-gateway"
+	)
+
+	clusterName := environment + "-platform" // e.g. "local-platform"
+	kindClusterName := environment + "-platform"
+
+	provider := cluster.NewProvider()
+	// Use internal IP (runsOnLocalHost=false) so the host stored in ClusterAccess
+	// is reachable from within the kind-platform-mesh Docker network.
+	kubeconfigRaw, err := provider.KubeConfig(kindClusterName, false)
+	if err != nil {
+		return fmt.Errorf("getting kubeconfig for kind-%s: %w", kindClusterName, err)
+	}
+
+	cfg, err := clientcmd.RESTConfigFromKubeConfig([]byte(kubeconfigRaw))
+	if err != nil {
+		return fmt.Errorf("parsing kubeconfig for kind-%s: %w", kindClusterName, err)
+	}
+
+	caData := cfg.TLSClientConfig.CAData
+	if len(caData) == 0 {
+		return fmt.Errorf("kind-%s kubeconfig has no CA data", kindClusterName)
+	}
+
+	caSecretName := clusterName + "-ca"
+
+	nsManifest := fmt.Sprintf(`apiVersion: v1
+kind: Namespace
+metadata:
+  name: %s
+`, caNamespace)
+	if err := kubectlApplyContext(ctx, pmContext, nsManifest); err != nil {
+		return fmt.Errorf("ensuring namespace %s: %w", caNamespace, err)
+	}
+
+	caManifest := fmt.Sprintf(`apiVersion: v1
+kind: Secret
+metadata:
+  name: %s
+  namespace: %s
+type: Opaque
+data:
+  ca.crt: %s
+`, caSecretName, caNamespace, base64.StdEncoding.EncodeToString(caData))
+
+	if err := kubectlApplyContext(ctx, pmContext, caManifest); err != nil {
+		return fmt.Errorf("applying CA secret for %s: %w", clusterName, err)
+	}
+
+	clusterAccessManifest := fmt.Sprintf(`apiVersion: gateway.platform-mesh.io/v1alpha1
+kind: ClusterAccess
+metadata:
+  name: %s
+spec:
+  host: %s
+  ca:
+    secretRef:
+      name: %s
+      namespace: %s
+      key: ca.crt
+  auth:
+    serviceAccountRef:
+      name: %s
+      namespace: %s
+      audience:
+        - kubernetes
+      token_expiration: 1h
+`, clusterName, cfg.Host, caSecretName, caNamespace, gwServiceAccount, gwNamespace)
+
+	if err := kubectlApplyContext(ctx, pmContext, clusterAccessManifest); err != nil {
+		return fmt.Errorf("applying ClusterAccess for %s: %w", clusterName, err)
+	}
+
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Helpers — thin wrappers around kubectl / helm
+// --------------------------------------------------------------------------- replaces the KCP server address in a kubeconfig so
 // the syncagent pod can reach KCP via the Traefik nodePort instead of the
 // local port-forward address.
 func rewriteKubeconfigServer(kubeconfig, oldServer, nodePort string) string {
@@ -666,6 +1074,46 @@ func kcpServerFromKubeconfig(kubeconfigPath string) (string, error) {
 	return u.String(), nil
 }
 
+// indentWriter wraps an io.Writer and prefixes every line with a fixed indent.
+type indentWriter struct {
+	w      io.Writer
+	prefix []byte
+	// pending tracks whether the next write starts a new line that needs indenting.
+	pending bool
+}
+
+func newIndentWriter(w io.Writer, prefix string) *indentWriter {
+	return &indentWriter{w: w, prefix: []byte(prefix), pending: true}
+}
+
+func (iw *indentWriter) Write(p []byte) (int, error) {
+	total := 0
+	for len(p) > 0 {
+		if iw.pending {
+			if _, err := iw.w.Write(iw.prefix); err != nil {
+				return total, err
+			}
+			iw.pending = false
+		}
+		idx := bytes.IndexByte(p, '\n')
+		if idx == -1 {
+			n, err := iw.w.Write(p)
+			total += n
+			return total, err
+		}
+		n, err := iw.w.Write(p[:idx+1])
+		total += n
+		if err != nil {
+			return total, err
+		}
+		iw.pending = true
+		p = p[idx+1:]
+	}
+	return total, nil
+}
+
+const subprocessIndent = "      "
+
 // kubectlOutput runs kubectl and returns stdout.
 func kubectlOutput(ctx context.Context, kubeconfig, contextOrServer string, args ...string) ([]byte, error) {
 	full := buildKubectlArgs(kubeconfig, contextOrServer, args)
@@ -683,8 +1131,8 @@ func kubectlOutput(ctx context.Context, kubeconfig, contextOrServer string, args
 func kubectlRaw(ctx context.Context, kubeconfig, contextOrServer string, args ...string) error {
 	full := buildKubectlArgs(kubeconfig, contextOrServer, args)
 	cmd := exec.CommandContext(ctx, "kubectl", full...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = newIndentWriter(os.Stdout, subprocessIndent)
+	cmd.Stderr = newIndentWriter(os.Stderr, subprocessIndent)
 	return cmd.Run()
 }
 
@@ -704,8 +1152,8 @@ func kubectlApplyBytesServerSide(ctx context.Context, kubeconfig, contextOrServe
 	full := buildKubectlArgs(kubeconfig, contextOrServer, []string{"apply", "--server-side", "--force-conflicts", "-f", "-"})
 	cmd := exec.CommandContext(ctx, "kubectl", full...)
 	cmd.Stdin = bytes.NewReader(data)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = newIndentWriter(os.Stdout, subprocessIndent)
+	cmd.Stderr = newIndentWriter(os.Stderr, subprocessIndent)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("kubectl apply --server-side: %w", err)
 	}
@@ -717,8 +1165,8 @@ func kubectlApplyBytes(ctx context.Context, kubeconfig, contextOrServer string, 
 	full := buildKubectlArgs(kubeconfig, contextOrServer, []string{"apply", "-f", "-"})
 	cmd := exec.CommandContext(ctx, "kubectl", full...)
 	cmd.Stdin = bytes.NewReader(data)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = newIndentWriter(os.Stdout, subprocessIndent)
+	cmd.Stderr = newIndentWriter(os.Stderr, subprocessIndent)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("kubectl apply: %w", err)
 	}
@@ -743,13 +1191,18 @@ func buildKubectlArgs(kubeconfig, contextOrServer string, args []string) []strin
 	return append(prefix, args...)
 }
 
-// helm runs the helm CLI.
+// helm runs the helm CLI, printing output with the subprocess indent.
 func helm(ctx context.Context, args ...string) error {
-	_, err := helmOutput(ctx, args...)
-	return err
+	cmd := exec.CommandContext(ctx, "helm", args...)
+	cmd.Stdout = newIndentWriter(os.Stdout, subprocessIndent)
+	cmd.Stderr = newIndentWriter(os.Stderr, subprocessIndent)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("helm %s: %w", strings.Join(args, " "), err)
+	}
+	return nil
 }
 
-// helmOutput runs helm and returns stdout.
+// helmOutput runs helm and returns stdout (no indented printing).
 func helmOutput(ctx context.Context, args ...string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, "helm", args...)
 	var stdout, stderr bytes.Buffer

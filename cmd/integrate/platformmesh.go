@@ -25,7 +25,7 @@ Required:
   --kcp-kubeconfig   Path to the KCP admin kubeconfig (e.g. ~/.../kcp/admin.kubeconfig)
 
 Optional:
-  --environment      Name of the ocpctl environment (default: "local")
+  --environment        Name of the ocpctl environment (default: "local")
 
 Steps performed:
   Phase A:
@@ -39,7 +39,11 @@ Steps performed:
     8. Create syncagent RBAC and PublishedResources
   Phase B:
     9.  Label APIExport and create ProviderMetadata
-    10. Create ContentConfiguration in root:platform-mesh-system`,
+    10. Create ContentConfiguration in root:platform-mesh-system
+  Phase C (OIDC trust ring):
+    11. Apply cp-kind ClusterAccess writer RBAC to kind-platform-mesh
+    12. Apply GW SA cluster-creator RBAC to kind-<env>-platform
+    13. Mount AuthenticationConfiguration on bootstrap clusters`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if kcpKubeconfig == "" {
 				return fmt.Errorf("--kcp-kubeconfig is required")

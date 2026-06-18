@@ -30,10 +30,20 @@ func EnsurePlatformCluster(environment string) (bool, error) {
 		}
 	}
 
+	kubeadmPatch := fmt.Sprintf(`kind: ClusterConfiguration
+apiServer:
+  certSANs:
+    - %s.platform-mesh.localhost
+  extraArgs:
+    service-account-issuer: https://%s.platform-mesh.localhost
+    service-account-jwks-uri: https://%s.platform-mesh.localhost:6443/openid/v1/jwks
+`, name, name, name)
+
 	err = provider.Create(name, cluster.CreateWithV1Alpha4Config(&v1alpha4.Cluster{
 		Nodes: []v1alpha4.Node{
 			{
 				Role: v1alpha4.ControlPlaneRole,
+				KubeadmConfigPatches: []string{kubeadmPatch},
 				ExtraMounts: []v1alpha4.Mount{
 					{
 						HostPath:      "/var/run/docker.sock",
