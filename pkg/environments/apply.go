@@ -103,6 +103,15 @@ func applyPlatformResources(ctx context.Context, environment string, cfg *config
 		}
 		select {
 		case <-ctx.Done():
+			readySet := make(map[string]bool, len(summary.Ready))
+			for _, r := range summary.Ready {
+				readySet[r.String()] = true
+			}
+			for _, r := range summary.Applied {
+				if !readySet[r.String()] {
+					log.Infof("Not ready: %s", r)
+				}
+			}
 			return ctx.Err()
 		case <-time.After(5 * time.Second):
 		}
