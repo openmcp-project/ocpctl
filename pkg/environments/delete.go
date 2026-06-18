@@ -37,7 +37,7 @@ func Delete(ctx context.Context, name string) error {
 			log.Warnf("Skipping cluster %q: failed to parse provider status: %v", cl.Name, err)
 			continue
 		}
-		if ps.Kind != "ClusterStatus" || ps.APIVersion != v1alpha1.GroupVersion.String() {
+		if ps.Kind != "ClusterStatus" || ps.APIVersion != v1alpha1.SchemeGroupVersion.String() {
 			continue
 		}
 		kindClusters = append(kindClusters, ps.KindClusterName)
