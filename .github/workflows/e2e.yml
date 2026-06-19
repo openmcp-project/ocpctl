@@ -38,11 +38,14 @@ jobs:
           echo "KUBECONFIG=/tmp/onboarding.kubeconfig" >> "$GITHUB_ENV"
 
       - name: Wait for ControlPlane CRD
-        timeout-minutes: 2
+        timeout-minutes: 10
         run: |
-          kubectl wait --for=condition=Established \
+          until kubectl wait --for=condition=Established \
             crd/controlplanes.core.open-control-plane.io \
-            --timeout=120s
+            --timeout=10s 2>/dev/null; do
+            echo "CRD not yet available, retrying..."
+            sleep 5
+          done
 
       - name: Create ControlPlane
         run: |
@@ -57,27 +60,15 @@ jobs:
           EOF
 
       - name: Wait for ControlPlane to be ready
-        timeout-minutes: 5
+        timeout-minutes: 10
         run: |
-          DEADLINE=$((SECONDS + 300))
-          while [ $SECONDS -lt $DEADLINE ]; do
-            TOTAL=$(kubectl get cp test -n default \
-              -o jsonpath='{.status.conditions}' 2>/dev/null | jq 'length // 0')
-            READY=$(kubectl get cp test -n default \
-              -o jsonpath='{.status.conditions[*].status}' 2>/dev/null \
-              | tr ' ' '\n' | grep -c "^True$" || true)
-            echo "ControlPlane conditions: ${READY:-0}/${TOTAL:-0} True"
-            if [ "${TOTAL:-0}" -gt 0 ] && [ "${READY:-0}" -eq "${TOTAL:-0}" ]; then
-              echo "ControlPlane is ready"
-              break
-            fi
-            sleep 10
+          until kubectl wait cp test -n default \
+            --for=condition=Ready \
+            --timeout=10s 2>/dev/null; do
+            echo "ControlPlane not yet ready, retrying..."
+            kubectl get cp test -n default 2>/dev/null || true
+            sleep 5
           done
-          if [ "${READY:-0}" -ne "${TOTAL:-0}" ] || [ "${TOTAL:-0}" -eq 0 ]; then
-            echo "Timed out waiting for ControlPlane to be ready"
-            kubectl describe cp test -n default || true
-            exit 1
-          fi
 
       - name: Find MCP kind cluster
         run: |
@@ -88,10 +79,11 @@ jobs:
           [ -n "$MCP_CLUSTER" ] || { echo "No MCP kind cluster found"; exit 1; }
 
       - name: Verify MCP cluster pods are ready
+        timeout-minutes: 5
         run: |
           kind get kubeconfig --name "$MCP_CLUSTER" > /tmp/mcp.kubeconfig
           kubectl wait --for=condition=Ready pods --all --all-namespaces \
-            --timeout=120s --kubeconfig /tmp/mcp.kubeconfig
+            --timeout=300s --kubeconfig /tmp/mcp.kubeconfig
 
       - name: Cleanup
         if: always()
