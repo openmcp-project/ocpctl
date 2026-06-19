@@ -140,6 +140,11 @@ func applyCluster(ctx context.Context, c *Cluster, index map[client.Object]resou
 				summary.WaitingForDeps = append(summary.WaitingForDeps, r)
 				continue
 			}
+			if apierrors.IsConflict(err) {
+				log.Debugf("Conflict applying %s, will retry", r)
+				summary.WaitingForDeps = append(summary.WaitingForDeps, r)
+				continue
+			}
 			return summary, fmt.Errorf("applying %s: %w", r, err)
 		}
 		log.Debugf("Applied %s (%s)", r, result)
