@@ -39,8 +39,11 @@ func TestGatewayServiceConfig_MutateFn(t *testing.T) {
 func TestGatewayServiceConfig_Dependencies(t *testing.T) {
 	dep := testGatewayDep()
 	r := GatewayServiceConfig("gateway", dep)
-	if len(r.Dependencies) != 1 || r.Dependencies[0] != dep {
-		t.Errorf("expected dep as sole dependency, got %v", r.Dependencies)
+	if len(r.Dependencies) != 0 {
+		t.Errorf("expected no hard dependencies, got %v", r.Dependencies)
+	}
+	if len(r.AppliedDependencies) != 1 || r.AppliedDependencies[0] != dep {
+		t.Errorf("expected dep as sole applied dependency, got %v", r.AppliedDependencies)
 	}
 }
 

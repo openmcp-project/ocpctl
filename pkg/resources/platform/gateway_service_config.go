@@ -23,16 +23,19 @@ var gatewayServiceConfigGVK = schema.GroupVersionKind{
 }
 
 // GatewayServiceConfig returns a Resource for the GatewayServiceConfig CR that
-// the platform-service-gateway pod requires on startup. Depends on the gateway
-// PlatformService being ready so the CRD is registered before the CR is applied.
+// the platform-service-gateway pod requires on startup. Uses AppliedDependencies
+// on the gateway PlatformService so the CR is applied as soon as the
+// PlatformService exists (which causes the gateway pod to start and install the
+// CRD), without waiting for the gateway to reach Ready phase (which would only
+// happen after this CR is already applied).
 func GatewayServiceConfig(name string, dep client.Object) *resources.Resource {
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(gatewayServiceConfigGVK)
 	obj.SetName(name)
 
 	return &resources.Resource{
-		Object:       obj,
-		Dependencies: []client.Object{dep},
+		Object:              obj,
+		AppliedDependencies: []client.Object{dep},
 		MutateFn: func(_ context.Context) error {
 			return unstructured.SetNestedField(obj.Object, map[string]interface{}{
 				"dns": map[string]interface{}{
