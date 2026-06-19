@@ -78,8 +78,11 @@ jobs:
       - name: Verify MCP cluster pods are ready
         run: |
           kind get kubeconfig --name "$MCP_CLUSTER" > /tmp/mcp.kubeconfig
-          kubectl wait --for=condition=Ready pods --all --all-namespaces \
-            --timeout=9999s --kubeconfig /tmp/mcp.kubeconfig
+          until kubectl wait --for=condition=Ready pods --all --all-namespaces \
+            --timeout=10s --kubeconfig /tmp/mcp.kubeconfig 2>/dev/null; do
+            echo "MCP cluster not yet ready, retrying..."
+            sleep 5
+          done
 
       - name: Cleanup
         if: always()
