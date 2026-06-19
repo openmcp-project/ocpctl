@@ -16,4 +16,4 @@ spec:
   platformServices:
     - name: gateway
       # renovate: datasource=docker depName=ghcr.io/openmcp-project/images/platform-service-gateway
-      image: ghcr.io/openmcp-project/images/platform-service-gateway:v0.0.12
+      image: ghcr.io/openmcp-project/images/platform-service-gateway:v0.0.13
