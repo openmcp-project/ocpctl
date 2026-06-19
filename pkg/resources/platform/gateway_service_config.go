@@ -57,13 +57,7 @@ func GatewayServiceConfig(name string, deployment *appsv1.Deployment) *resources
 				},
 				"envoyGateway": map[string]interface{}{
 					"chart": map[string]interface{}{
-						"url": defaultEnvoyChartURL,
 						"tag": defaultEnvoyChartTag,
-					},
-					"images": map[string]interface{}{
-						"proxy":     defaultEnvoyProxyImage,
-						"gateway":   defaultEnvoyGatewayImage,
-						"rateLimit": defaultEnvoyRatelimitImage,
 					},
 				},
 			}, "spec")
