@@ -60,7 +60,7 @@ jobs:
       - name: Wait for ControlPlane to be ready
         run: |
           until kubectl wait cp test -n default \
-            --for=condition=Ready \
+            --for=jsonpath='{.status.phase}'=Ready \
             --timeout=10s 2>/dev/null; do
             echo "ControlPlane not yet ready, retrying..."
             kubectl get cp test -n default 2>/dev/null || true
