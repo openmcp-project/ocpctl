@@ -13,6 +13,15 @@ spec:
     - name: crossplane
       # renovate: datasource=docker depName=ghcr.io/openmcp-project/images/service-provider-crossplane
       image: ghcr.io/openmcp-project/images/service-provider-crossplane:v1.0.1
+    - name: flux
+      # renovate: datasource=docker depName=ghcr.io/openmcp-project/images/service-provider-flux
+      image: ghcr.io/openmcp-project/images/service-provider-flux:v1.0.0
+    - name: ocm
+      # renovate: datasource=docker depName=ghcr.io/open-component-model/images/service-provider-ocm
+      image: ghcr.io/open-component-model/images/service-provider-ocm:v0.2.0
+    - name: kro
+      # renovate: datasource=docker depName=ghcr.io/openmcp-project/images/service-provider-kro
+      image: ghcr.io/openmcp-project/images/service-provider-kro:v1.0.2
   platformServices:
     - name: gateway
       # renovate: datasource=docker depName=ghcr.io/openmcp-project/images/platform-service-gateway
