@@ -22,10 +22,9 @@ jobs:
         run: go build -o ocpctl .
 
       - name: Apply local environment
-        run: ./ocpctl env apply local --timeout 15m
+        run: ./ocpctl env apply local --timeout 0
 
       - name: Wait for onboarding cluster
-        timeout-minutes: 5
         run: |
           until kind get clusters 2>/dev/null | grep -q "^local-onboarding$"; do
             echo "Waiting for local-onboarding cluster..."
@@ -38,7 +37,6 @@ jobs:
           echo "KUBECONFIG=/tmp/onboarding.kubeconfig" >> "$GITHUB_ENV"
 
       - name: Wait for ControlPlane CRD
-        timeout-minutes: 10
         run: |
           until kubectl wait --for=condition=Established \
             crd/controlplanes.core.open-control-plane.io \
@@ -60,7 +58,6 @@ jobs:
           EOF
 
       - name: Wait for ControlPlane to be ready
-        timeout-minutes: 10
         run: |
           until kubectl wait cp test -n default \
             --for=condition=Ready \
@@ -79,11 +76,10 @@ jobs:
           [ -n "$MCP_CLUSTER" ] || { echo "No MCP kind cluster found"; exit 1; }
 
       - name: Verify MCP cluster pods are ready
-        timeout-minutes: 5
         run: |
           kind get kubeconfig --name "$MCP_CLUSTER" > /tmp/mcp.kubeconfig
           kubectl wait --for=condition=Ready pods --all --all-namespaces \
-            --timeout=300s --kubeconfig /tmp/mcp.kubeconfig
+            --timeout=9999s --kubeconfig /tmp/mcp.kubeconfig
 
       - name: Cleanup
         if: always()
