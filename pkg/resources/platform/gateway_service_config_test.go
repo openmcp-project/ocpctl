@@ -28,11 +28,6 @@ func TestGatewayServiceConfig_MutateFn(t *testing.T) {
 	if chartTag == "" {
 		t.Errorf("spec.envoyGateway.chart.tag is empty")
 	}
-
-	chartURL, _, _ := unstructured.NestedString(obj.Object, "spec", "envoyGateway", "chart", "url")
-	if chartURL == "" {
-		t.Errorf("spec.envoyGateway.chart.url is empty")
-	}
 }
 
 func TestGatewayServiceConfig_Dependencies(t *testing.T) {

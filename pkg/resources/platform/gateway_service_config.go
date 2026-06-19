@@ -11,14 +11,10 @@ import (
 )
 
 const (
-	// Envoy component images and chart are sourced from the openmcp-project OCM registry.
-	// Update these when upgrading platform-service-gateway.
-	defaultEnvoyChartURL    = "oci://ghcr.io/openmcp-project/components/github.com/openmcp-project/openmcp/charts/envoy-gateway"
-	defaultEnvoyChartTag    = "1.5.4"
-	defaultEnvoyProxyImage  = "ghcr.io/openmcp-project/components/github.com/openmcp-project/openmcp/images/envoy-proxy:distroless-v1.36.2"
-	defaultEnvoyGatewayImage = "ghcr.io/openmcp-project/components/github.com/openmcp-project/openmcp/images/envoy-gateway:v1.5.4"
-	defaultEnvoyRatelimitImage = "ghcr.io/openmcp-project/components/github.com/openmcp-project/openmcp/images/envoy-ratelimit:99d85510"
-	defaultBaseDomain       = "openmcp.localhost"
+	// defaultEnvoyChartTag is the Envoy Gateway Helm chart version.
+	// Update when upgrading platform-service-gateway.
+	defaultEnvoyChartTag = "1.5.4"
+	defaultBaseDomain    = "openmcp.localhost"
 )
 
 var gatewayServiceConfigGVK = schema.GroupVersionKind{
