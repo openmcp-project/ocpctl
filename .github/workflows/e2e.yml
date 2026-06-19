@@ -35,6 +35,14 @@ jobs:
       - name: Get onboarding kubeconfig
         run: kind get kubeconfig --name local-onboarding > /tmp/onboarding.kubeconfig
 
+      - name: Wait for ControlPlane CRD
+        timeout-minutes: 2
+        run: |
+          kubectl wait --for=condition=Established \
+            crd/controlplanes.core.open-control-plane.io \
+            --timeout=120s \
+            --kubeconfig /tmp/onboarding.kubeconfig
+
       - name: Create ControlPlane
         run: |
           kubectl apply --kubeconfig /tmp/onboarding.kubeconfig -f - <<'EOF'
