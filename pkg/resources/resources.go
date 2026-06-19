@@ -135,6 +135,11 @@ func applyCluster(ctx context.Context, c *Cluster, index map[client.Object]resou
 
 		result, err := controllerutil.CreateOrUpdate(ctx, c.Client, r.Object, mutateFn)
 		if err != nil {
+			if apimeta.IsNoMatchError(err) {
+				log.Debugf("CRD not yet registered for %s, will retry", r)
+				summary.WaitingForDeps = append(summary.WaitingForDeps, r)
+				continue
+			}
 			return summary, fmt.Errorf("applying %s: %w", r, err)
 		}
 		log.Debugf("Applied %s (%s)", r, result)
