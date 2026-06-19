@@ -22,7 +22,7 @@ jobs:
         run: go build -o ocpctl .
 
       - name: Apply local environment
-        run: ./ocpctl env apply local --timeout 0
+        run: ./ocpctl env apply local
 
       - name: Wait for onboarding cluster
         run: |
