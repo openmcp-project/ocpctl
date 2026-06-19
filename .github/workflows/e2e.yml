@@ -67,20 +67,59 @@ jobs:
             sleep 5
           done
 
-      - name: Find MCP kind cluster
+      - name: Get MCP cluster kubeconfig via AccessRequest
         run: |
-          MCP_CLUSTER=$(kind get clusters 2>/dev/null \
-            | grep -v "^local-platform$" | grep -v "^local-onboarding$" | head -1)
-          echo "MCP cluster: ${MCP_CLUSTER}"
-          echo "MCP_CLUSTER=${MCP_CLUSTER}" >> "$GITHUB_ENV"
-          [ -n "$MCP_CLUSTER" ] || { echo "No MCP kind cluster found"; exit 1; }
+          PLATFORM_KUBECONFIG=$(kind get kubeconfig --name local-platform)
+
+          # Find the MCP Cluster CR on the platform cluster
+          MCP_CLUSTER=$(kubectl --kubeconfig <(echo "$PLATFORM_KUBECONFIG") \
+            get clusters.clusters.openmcp.cloud \
+            -n openmcp-system \
+            -o json \
+            | jq -r '.items[] | select(.spec.purposes[] == "mcp") | .metadata.name' \
+            | head -1)
+          echo "MCP Cluster CR: ${MCP_CLUSTER}"
+          [ -n "$MCP_CLUSTER" ] || { echo "No MCP cluster CR found"; exit 1; }
+
+          # Create an AccessRequest for the MCP cluster
+          kubectl --kubeconfig <(echo "$PLATFORM_KUBECONFIG") apply -f - <<EOF
+          apiVersion: clusters.openmcp.cloud/v1alpha1
+          kind: AccessRequest
+          metadata:
+            name: e2e-mcp-access
+            namespace: openmcp-system
+          spec:
+            clusterRef:
+              name: ${MCP_CLUSTER}
+              namespace: openmcp-system
+            token:
+              roleRefs:
+                - name: cluster-admin
+                  kind: ClusterRole
+          EOF
+
+          # Wait for the AccessRequest to be granted
+          until kubectl --kubeconfig <(echo "$PLATFORM_KUBECONFIG") \
+            wait accessrequest e2e-mcp-access -n openmcp-system \
+            --for=jsonpath='{.status.phase}'=Granted \
+            --timeout=10s 2>/dev/null; do
+            echo "Waiting for AccessRequest to be granted..."
+            sleep 5
+          done
+
+          # Extract the kubeconfig from the secret
+          SECRET=$(kubectl --kubeconfig <(echo "$PLATFORM_KUBECONFIG") \
+            get accessrequest e2e-mcp-access -n openmcp-system \
+            -o jsonpath='{.status.secretRef.name}')
+          kubectl --kubeconfig <(echo "$PLATFORM_KUBECONFIG") \
+            get secret "$SECRET" -n openmcp-system \
+            -o jsonpath='{.data.kubeconfig}' | base64 -d > /tmp/mcp.kubeconfig
 
       - name: Verify MCP cluster pods are ready
         run: |
-          kind get kubeconfig --name "$MCP_CLUSTER" > /tmp/mcp.kubeconfig
           until kubectl wait --for=condition=Ready pods --all --all-namespaces \
             --timeout=10s --kubeconfig /tmp/mcp.kubeconfig 2>/dev/null; do
-            echo "MCP cluster not yet ready, retrying..."
+            echo "MCP cluster pods not yet ready, retrying..."
             sleep 5
           done
 
