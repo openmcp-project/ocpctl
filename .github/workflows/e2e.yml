@@ -33,19 +33,20 @@ jobs:
           done
 
       - name: Get onboarding kubeconfig
-        run: kind get kubeconfig --name local-onboarding > /tmp/onboarding.kubeconfig
+        run: |
+          kind get kubeconfig --name local-onboarding > /tmp/onboarding.kubeconfig
+          echo "KUBECONFIG=/tmp/onboarding.kubeconfig" >> "$GITHUB_ENV"
 
       - name: Wait for ControlPlane CRD
         timeout-minutes: 2
         run: |
           kubectl wait --for=condition=Established \
             crd/controlplanes.core.open-control-plane.io \
-            --timeout=120s \
-            --kubeconfig /tmp/onboarding.kubeconfig
+            --timeout=120s
 
       - name: Create ControlPlane
         run: |
-          kubectl apply --kubeconfig /tmp/onboarding.kubeconfig -f - <<'EOF'
+          kubectl apply -f - <<'EOF'
           apiVersion: core.open-control-plane.io/v2alpha1
           kind: ControlPlane
           metadata:
@@ -60,9 +61,9 @@ jobs:
         run: |
           DEADLINE=$((SECONDS + 300))
           while [ $SECONDS -lt $DEADLINE ]; do
-            TOTAL=$(kubectl get cp test -n default --kubeconfig /tmp/onboarding.kubeconfig \
+            TOTAL=$(kubectl get cp test -n default \
               -o jsonpath='{.status.conditions}' 2>/dev/null | jq 'length // 0')
-            READY=$(kubectl get cp test -n default --kubeconfig /tmp/onboarding.kubeconfig \
+            READY=$(kubectl get cp test -n default \
               -o jsonpath='{.status.conditions[*].status}' 2>/dev/null \
               | tr ' ' '\n' | grep -c "^True$" || true)
             echo "ControlPlane conditions: ${READY:-0}/${TOTAL:-0} True"
@@ -74,7 +75,7 @@ jobs:
           done
           if [ "${READY:-0}" -ne "${TOTAL:-0}" ] || [ "${TOTAL:-0}" -eq 0 ]; then
             echo "Timed out waiting for ControlPlane to be ready"
-            kubectl describe cp test -n default --kubeconfig /tmp/onboarding.kubeconfig || true
+            kubectl describe cp test -n default || true
             exit 1
           fi
 
