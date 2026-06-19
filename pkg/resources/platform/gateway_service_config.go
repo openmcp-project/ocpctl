@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/openmcp-project/ocpctl/pkg/resources"
-	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,16 +23,16 @@ var gatewayServiceConfigGVK = schema.GroupVersionKind{
 }
 
 // GatewayServiceConfig returns a Resource for the GatewayServiceConfig CR that
-// the platform-service-gateway pod requires on startup. Depends on the operator
-// deployment so it is created before the gateway pod starts.
-func GatewayServiceConfig(name string, deployment *appsv1.Deployment) *resources.Resource {
+// the platform-service-gateway pod requires on startup. Depends on the gateway
+// PlatformService being ready so the CRD is registered before the CR is applied.
+func GatewayServiceConfig(name string, dep client.Object) *resources.Resource {
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(gatewayServiceConfigGVK)
 	obj.SetName(name)
 
 	return &resources.Resource{
 		Object:       obj,
-		Dependencies: []client.Object{deployment},
+		Dependencies: []client.Object{dep},
 		MutateFn: func(_ context.Context) error {
 			return unstructured.SetNestedField(obj.Object, map[string]interface{}{
 				"dns": map[string]interface{}{

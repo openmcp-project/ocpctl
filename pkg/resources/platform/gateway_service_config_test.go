@@ -4,14 +4,20 @@ import (
 	"context"
 	"testing"
 
-	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+func testGatewayDep() *unstructured.Unstructured {
+	obj := &unstructured.Unstructured{}
+	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: "provider.openmcp.cloud", Version: "v1alpha1", Kind: "PlatformService"})
+	obj.SetName("gateway")
+	return obj
+}
+
 func TestGatewayServiceConfig_MutateFn(t *testing.T) {
-	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "op", Namespace: "ns"}}
-	r := GatewayServiceConfig("gateway", deployment)
+	dep := testGatewayDep()
+	r := GatewayServiceConfig("gateway", dep)
 
 	if err := r.MutateFn(context.Background()); err != nil {
 		t.Fatalf("MutateFn error: %v", err)
@@ -31,16 +37,16 @@ func TestGatewayServiceConfig_MutateFn(t *testing.T) {
 }
 
 func TestGatewayServiceConfig_Dependencies(t *testing.T) {
-	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "op", Namespace: "ns"}}
-	r := GatewayServiceConfig("gateway", deployment)
-	if len(r.Dependencies) != 1 || r.Dependencies[0] != deployment {
-		t.Errorf("expected deployment as sole dependency, got %v", r.Dependencies)
+	dep := testGatewayDep()
+	r := GatewayServiceConfig("gateway", dep)
+	if len(r.Dependencies) != 1 || r.Dependencies[0] != dep {
+		t.Errorf("expected dep as sole dependency, got %v", r.Dependencies)
 	}
 }
 
 func TestGatewayServiceConfig_GVK(t *testing.T) {
-	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "op", Namespace: "ns"}}
-	r := GatewayServiceConfig("gateway", deployment)
+	dep := testGatewayDep()
+	r := GatewayServiceConfig("gateway", dep)
 
 	obj := r.Object.(*unstructured.Unstructured)
 	gvk := obj.GroupVersionKind()
