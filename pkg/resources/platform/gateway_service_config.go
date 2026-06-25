@@ -6,7 +6,6 @@ import (
 	"github.com/openmcp-project/ocpctl/pkg/resources"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -23,19 +22,15 @@ var gatewayServiceConfigGVK = schema.GroupVersionKind{
 }
 
 // GatewayServiceConfig returns a Resource for the GatewayServiceConfig CR that
-// the platform-service-gateway pod requires on startup. Uses AppliedDependencies
-// on the gateway PlatformService so the CR is applied as soon as the
-// PlatformService exists (which causes the gateway pod to start and install the
-// CRD), without waiting for the gateway to reach Ready phase (which would only
-// happen after this CR is already applied).
-func GatewayServiceConfig(name string, dep client.Object) *resources.Resource {
+// the platform-service-gateway pod requires on startup. The CRD is installed by
+// the gateway pod itself; IsNoMatchError retries handle the race automatically.
+func GatewayServiceConfig(name string) *resources.Resource {
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(gatewayServiceConfigGVK)
 	obj.SetName(name)
 
 	return &resources.Resource{
-		Object:              obj,
-		AppliedDependencies: []client.Object{dep},
+		Object:  obj,
 		MutateFn: func(_ context.Context) error {
 			return unstructured.SetNestedField(obj.Object, map[string]interface{}{
 				"dns": map[string]interface{}{

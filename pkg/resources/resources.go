@@ -27,11 +27,7 @@ type Resource struct {
 	External     bool
 	MutateFn     MutateFn
 	Dependencies []client.Object
-	// AppliedDependencies are satisfied when the referenced objects exist in the
-	// cluster, regardless of their ReadyFn. Use when a resource must wait for
-	// another to be created (e.g. for a CRD to be installed) but not fully ready.
-	AppliedDependencies []client.Object
-	ReadyFn             ReadyFn
+	ReadyFn      ReadyFn
 }
 
 // String returns a human-readable identifier in the form kind/namespace/name.
@@ -177,18 +173,6 @@ func isReady(ctx context.Context, r *Resource, c client.Client) (bool, error) {
 	return r.ReadyFn(ctx)
 }
 
-// isApplied fetches r from c and reports whether it exists, ignoring ReadyFn.
-// Returns (false, nil) if the resource or its CRD does not exist yet.
-func isApplied(ctx context.Context, r *Resource, c client.Client) (bool, error) {
-	if err := c.Get(ctx, client.ObjectKeyFromObject(r.Object), r.Object); err != nil {
-		if apierrors.IsNotFound(err) || apimeta.IsNoMatchError(err) {
-			return false, nil
-		}
-		return false, fmt.Errorf("getting %s: %w", r, err)
-	}
-	return true, nil
-}
-
 // dependenciesReady reports whether all dependencies of r are ready.
 // Returns false if any dependency is not found in the index or is not ready.
 func dependenciesReady(ctx context.Context, r *Resource, index map[client.Object]resourceEntry) (bool, error) {
@@ -205,21 +189,6 @@ func dependenciesReady(ctx context.Context, r *Resource, index map[client.Object
 		}
 		if !ready {
 			log.Debugf("Dependency %s of %s is not ready", entry.resource, r)
-			return false, nil
-		}
-	}
-	for _, dep := range r.AppliedDependencies {
-		entry, ok := index[dep]
-		if !ok {
-			log.Debugf("Applied dependency %s of %s not found in index", objectString(dep), r)
-			return false, nil
-		}
-		applied, err := isApplied(ctx, entry.resource, entry.cluster.Client)
-		if err != nil {
-			return false, fmt.Errorf("checking applied dependency %s: %w", entry.resource, err)
-		}
-		if !applied {
-			log.Debugf("Applied dependency %s of %s not yet created", entry.resource, r)
 			return false, nil
 		}
 	}

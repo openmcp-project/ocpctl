@@ -5,19 +5,10 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func testGatewayDep() *unstructured.Unstructured {
-	obj := &unstructured.Unstructured{}
-	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: "provider.openmcp.cloud", Version: "v1alpha1", Kind: "PlatformService"})
-	obj.SetName("gateway")
-	return obj
-}
-
 func TestGatewayServiceConfig_MutateFn(t *testing.T) {
-	dep := testGatewayDep()
-	r := GatewayServiceConfig("gateway", dep)
+	r := GatewayServiceConfig("gateway")
 
 	if err := r.MutateFn(context.Background()); err != nil {
 		t.Fatalf("MutateFn error: %v", err)
@@ -36,20 +27,15 @@ func TestGatewayServiceConfig_MutateFn(t *testing.T) {
 	}
 }
 
-func TestGatewayServiceConfig_Dependencies(t *testing.T) {
-	dep := testGatewayDep()
-	r := GatewayServiceConfig("gateway", dep)
+func TestGatewayServiceConfig_NoDependencies(t *testing.T) {
+	r := GatewayServiceConfig("gateway")
 	if len(r.Dependencies) != 0 {
-		t.Errorf("expected no hard dependencies, got %v", r.Dependencies)
-	}
-	if len(r.AppliedDependencies) != 1 || r.AppliedDependencies[0] != dep {
-		t.Errorf("expected dep as sole applied dependency, got %v", r.AppliedDependencies)
+		t.Errorf("expected no dependencies, got %v", r.Dependencies)
 	}
 }
 
 func TestGatewayServiceConfig_GVK(t *testing.T) {
-	dep := testGatewayDep()
-	r := GatewayServiceConfig("gateway", dep)
+	r := GatewayServiceConfig("gateway")
 
 	obj := r.Object.(*unstructured.Unstructured)
 	gvk := obj.GroupVersionKind()
