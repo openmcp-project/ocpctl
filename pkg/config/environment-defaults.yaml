@@ -12,7 +12,7 @@ spec:
   serviceProviders:
     - name: crossplane
       # renovate: datasource=docker depName=ghcr.io/openmcp-project/images/service-provider-crossplane
-      image: ghcr.io/openmcp-project/images/service-provider-crossplane:v1.0.1
+      image: ghcr.io/openmcp-project/images/service-provider-crossplane:v1.0.2
     - name: flux
       # renovate: datasource=docker depName=ghcr.io/openmcp-project/images/service-provider-flux
       image: ghcr.io/openmcp-project/images/service-provider-flux:v1.0.0
