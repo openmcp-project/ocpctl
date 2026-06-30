@@ -21,7 +21,7 @@ spec:
       image: ghcr.io/open-component-model/images/service-provider-ocm:v0.2.0
     - name: kro
       # renovate: datasource=docker depName=ghcr.io/openmcp-project/images/service-provider-kro
-      image: ghcr.io/openmcp-project/images/service-provider-kro:v1.0.2
+      image: ghcr.io/openmcp-project/images/service-provider-kro:v1.1.0
   platformServices:
     - name: gateway
       # renovate: datasource=docker depName=ghcr.io/openmcp-project/images/platform-service-gateway
