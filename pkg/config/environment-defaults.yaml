@@ -18,7 +18,7 @@ spec:
       image: ghcr.io/openmcp-project/images/service-provider-flux:v1.0.0
     - name: ocm
       # renovate: datasource=docker depName=ghcr.io/open-component-model/images/service-provider-ocm
-      image: ghcr.io/open-component-model/images/service-provider-ocm:v0.2.0
+      image: ghcr.io/open-component-model/images/service-provider-ocm:v0.3.0
     - name: kro
       # renovate: datasource=docker depName=ghcr.io/openmcp-project/images/service-provider-kro
       image: ghcr.io/openmcp-project/images/service-provider-kro:v1.0.2
