@@ -104,6 +104,8 @@ github.com/onsi/gomega v1.42.0 h1:CJby8u36xb7v34W78F8WKvqTQP7PCMIPB78IVDB73l4=
 github.com/onsi/gomega v1.42.0/go.mod h1:M/Uqpu/8qTjtzCLUA2zJHX9Iilrau25x1PdoSRbWh5A=
 github.com/openmcp-project/cluster-provider-kind v0.4.2 h1:BRQGFjoJEXLQnf/KHCGgIW5nvUxKbfleHj+RaNnvYm4=
 github.com/openmcp-project/cluster-provider-kind v0.4.2/go.mod h1:6aS+NlRlDH2DRETpU99TVmT8hEK2ao0ZpgIGvhtO77U=
+github.com/openmcp-project/cluster-provider-kind v0.5.0 h1:49N9VxpbAPc5iKYQzw8BJeUE7ypl/V//zWwnHvm1T/o=
+github.com/openmcp-project/cluster-provider-kind v0.5.0/go.mod h1:bi0E9tRMbP/Qsji1eh6pZi38AQFoWBoHz6+A4bNIdA4=
 github.com/openmcp-project/openmcp-operator/api v1.1.0 h1:zw/knjSK7pkGuJNYOLp19nxqGy6YmOF9nGSqnG6X2cs=
 github.com/openmcp-project/openmcp-operator/api v1.1.0/go.mod h1:5JNdGyGH75zeS02WUSL2hkx40UuWaG0a5Mtmzk/yHFM=
 github.com/pelletier/go-toml v1.9.5 h1:4yBQzkHv+7BHq2PQUZF3Mx0IYxG7LsP222s7Agd3ve8=
@@ -196,6 +198,8 @@ k8s.io/kube-openapi v0.0.0-20260603220949-865597e52e25 h1:mPMaPMpBij2V1Wv/fR+HW1
 k8s.io/kube-openapi v0.0.0-20260603220949-865597e52e25/go.mod h1:V/QaCUYDa+0QpcHhVVc5l99Uz56wEMEXBSj9oCDkNDY=
 k8s.io/utils v0.0.0-20260617174310-a95e086a2553 h1:hmGqDecjc8d7HVzWzRFl0QD9bYuYKbBEG7t8xwnVxfI=
 k8s.io/utils v0.0.0-20260617174310-a95e086a2553/go.mod h1:xDxuJ0whA3d0I4mf/C4ppKHxXynQ+fxnkmQH0vTHnuk=
+k8s.io/utils v0.0.0-20260626114624-be93311217bd h1:Ea7fgQ5we8Y9T0OX5o0dAHzQOBRI07D/dEYRaB9ZZEs=
+k8s.io/utils v0.0.0-20260626114624-be93311217bd/go.mod h1:xDxuJ0whA3d0I4mf/C4ppKHxXynQ+fxnkmQH0vTHnuk=
 sigs.k8s.io/controller-runtime v0.24.1 h1:miPEwrmirImAvgME1L9qebGHrOnGJoVmVdtOU9fRfo4=
 sigs.k8s.io/controller-runtime v0.24.1/go.mod h1:vFkfY5fGt5xAC/sKb8IBFKgWPNKG9OUG29dR8Y2wImw=
 sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 h1:IpInykpT6ceI+QxKBbEflcR5EXP7sU1kvOlxwZh5txg=

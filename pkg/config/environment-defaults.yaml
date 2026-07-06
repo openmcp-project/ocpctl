@@ -8,21 +8,21 @@ spec:
   clusterProviders:
     - name: kind
       # renovate: datasource=docker depName=ghcr.io/openmcp-project/images/cluster-provider-kind
-      image: ghcr.io/openmcp-project/images/cluster-provider-kind:v0.4.2
+      image: ghcr.io/openmcp-project/images/cluster-provider-kind:v0.5.0
   serviceProviders:
     - name: crossplane
       # renovate: datasource=docker depName=ghcr.io/openmcp-project/images/service-provider-crossplane
       image: ghcr.io/openmcp-project/images/service-provider-crossplane:v1.0.2
     - name: flux
       # renovate: datasource=docker depName=ghcr.io/openmcp-project/images/service-provider-flux
-      image: ghcr.io/openmcp-project/images/service-provider-flux:v1.0.0
+      image: ghcr.io/openmcp-project/images/service-provider-flux:v1.1.0
     - name: ocm
       # renovate: datasource=docker depName=ghcr.io/open-component-model/images/service-provider-ocm
-      image: ghcr.io/open-component-model/images/service-provider-ocm:v0.2.0
+      image: ghcr.io/open-component-model/images/service-provider-ocm:v0.3.0
     - name: kro
       # renovate: datasource=docker depName=ghcr.io/openmcp-project/images/service-provider-kro
-      image: ghcr.io/openmcp-project/images/service-provider-kro:v1.0.2
+      image: ghcr.io/openmcp-project/images/service-provider-kro:v1.1.0
   platformServices:
     - name: gateway
       # renovate: datasource=docker depName=ghcr.io/openmcp-project/images/platform-service-gateway
-      image: ghcr.io/openmcp-project/images/platform-service-gateway:v0.0.13
+      image: ghcr.io/openmcp-project/images/platform-service-gateway:v0.0.14
