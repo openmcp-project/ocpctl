@@ -88,7 +88,7 @@ func applyPlatformResources(ctx context.Context, environment string, cfg *config
 		psResource := platform.PlatformService(ps.Name, ps.Image, deployment)
 		platformCluster.AddResources(psResource)
 		if ps.Name == "gateway" {
-			platformCluster.AddResources(platform.GatewayServiceConfig(ps.Name, deployment))
+			platformCluster.AddResources(platform.GatewayServiceConfig(ps.Name))
 		}
 	}
 

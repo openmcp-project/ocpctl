@@ -1,0 +1,92 @@
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Build ocpctl
+        run: go build -o ocpctl .
+
+      - name: Apply local environment
+        run: ./ocpctl env apply local
+
+      - name: Wait for onboarding cluster
+        run: |
+          until kind get clusters 2>/dev/null | grep -q "^local-onboarding$"; do
+            echo "Waiting for local-onboarding cluster..."
+            sleep 10
+          done
+
+      - name: Get onboarding kubeconfig
+        run: |
+          kind get kubeconfig --name local-onboarding > /tmp/onboarding.kubeconfig
+          echo "KUBECONFIG=/tmp/onboarding.kubeconfig" >> "$GITHUB_ENV"
+
+      - name: Wait for ControlPlane CRD
+        run: |
+          until kubectl wait --for=condition=Established \
+            crd/controlplanes.core.open-control-plane.io \
+            --timeout=10s 2>/dev/null; do
+            echo "CRD not yet available, retrying..."
+            sleep 5
+          done
+
+      - name: Create ControlPlane
+        run: |
+          kubectl apply -f - <<'EOF'
+          apiVersion: core.open-control-plane.io/v2alpha1
+          kind: ControlPlane
+          metadata:
+            name: test
+            namespace: default
+          spec:
+            iam: {}
+          EOF
+
+      - name: Wait for ControlPlane to be ready
+        run: |
+          until kubectl wait cp test -n default \
+            --for=jsonpath='{.status.phase}'=Ready \
+            --timeout=10s 2>/dev/null; do
+            echo "ControlPlane not yet ready, retrying..."
+            kubectl get cp test -n default 2>/dev/null || true
+            sleep 5
+          done
+
+      - name: Find MCP kind cluster
+        run: |
+          until MCP_CLUSTER=$(kind get clusters 2>/dev/null \
+            | grep -v "^local-platform$" | grep -v "^local-onboarding$" | head -1) \
+            && [ -n "$MCP_CLUSTER" ]; do
+            echo "Waiting for MCP kind cluster..."
+            sleep 5
+          done
+          echo "MCP cluster: ${MCP_CLUSTER}"
+          echo "MCP_CLUSTER=${MCP_CLUSTER}" >> "$GITHUB_ENV"
+
+      - name: Verify MCP cluster pods are ready
+        run: |
+          kind get kubeconfig --name "$MCP_CLUSTER" > /tmp/mcp.kubeconfig
+          until kubectl wait --for=condition=Ready pods --all --all-namespaces \
+            --timeout=10s --kubeconfig /tmp/mcp.kubeconfig 2>/dev/null; do
+            echo "MCP cluster pods not yet ready, retrying..."
+            sleep 5
+          done
+
+      - name: Cleanup
+        if: always()
+        run: ./ocpctl env delete local || true
