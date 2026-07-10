@@ -108,6 +108,8 @@ github.com/openmcp-project/cluster-provider-kind v0.5.0 h1:49N9VxpbAPc5iKYQzw8BJ
 github.com/openmcp-project/cluster-provider-kind v0.5.0/go.mod h1:bi0E9tRMbP/Qsji1eh6pZi38AQFoWBoHz6+A4bNIdA4=
 github.com/openmcp-project/openmcp-operator/api v1.1.0 h1:zw/knjSK7pkGuJNYOLp19nxqGy6YmOF9nGSqnG6X2cs=
 github.com/openmcp-project/openmcp-operator/api v1.1.0/go.mod h1:5JNdGyGH75zeS02WUSL2hkx40UuWaG0a5Mtmzk/yHFM=
+github.com/openmcp-project/openmcp-operator/api v1.2.0 h1:WZzGEJj+cA/DTmz2og4m1MZj6rOJ9GX+ZcWqGQCULVo=
+github.com/openmcp-project/openmcp-operator/api v1.2.0/go.mod h1:WsFCWUsM5RU1/UYM+d9sLvYHIjar4gU5FN3YhoI7tdA=
 github.com/pelletier/go-toml v1.9.5 h1:4yBQzkHv+7BHq2PQUZF3Mx0IYxG7LsP222s7Agd3ve8=
 github.com/pelletier/go-toml v1.9.5/go.mod h1:u1nR/EPcESfeI/szUZKdtJ0xRNbUoANCkoOuaOx1Y+c=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
