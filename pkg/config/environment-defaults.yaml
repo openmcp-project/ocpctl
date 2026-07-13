@@ -4,7 +4,7 @@ spec:
   namespace: openmcp-system
   operator:
     # renovate: datasource=docker depName=ghcr.io/openmcp-project/images/openmcp-operator
-    image: ghcr.io/openmcp-project/images/openmcp-operator:v1.1.0
+    image: ghcr.io/openmcp-project/images/openmcp-operator:v1.2.0
   clusterProviders:
     - name: kind
       # renovate: datasource=docker depName=ghcr.io/openmcp-project/images/cluster-provider-kind
