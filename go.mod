@@ -1,10 +1,10 @@
 module github.com/openmcp-project/ocpctl
 
-go 1.26.4
+go 1.26.5
 
 require (
 	github.com/openmcp-project/cluster-provider-kind v0.5.0
-	github.com/openmcp-project/openmcp-operator/api v1.1.0
+	github.com/openmcp-project/openmcp-operator/api v1.2.0
 	github.com/spf13/cobra v1.10.2
 	go.uber.org/zap v1.28.0
 	k8s.io/api v0.36.2
