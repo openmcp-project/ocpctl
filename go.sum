@@ -106,6 +106,8 @@ github.com/openmcp-project/cluster-provider-kind v0.4.2 h1:BRQGFjoJEXLQnf/KHCGgI
 github.com/openmcp-project/cluster-provider-kind v0.4.2/go.mod h1:6aS+NlRlDH2DRETpU99TVmT8hEK2ao0ZpgIGvhtO77U=
 github.com/openmcp-project/cluster-provider-kind v0.5.0 h1:49N9VxpbAPc5iKYQzw8BJeUE7ypl/V//zWwnHvm1T/o=
 github.com/openmcp-project/cluster-provider-kind v0.5.0/go.mod h1:bi0E9tRMbP/Qsji1eh6pZi38AQFoWBoHz6+A4bNIdA4=
+github.com/openmcp-project/cluster-provider-kind v0.6.0 h1:gPshhtEWIqZP5T5vwN1dp9p3qN1Y+39Cq/z+IgO6LwE=
+github.com/openmcp-project/cluster-provider-kind v0.6.0/go.mod h1:1EBYPcUm8Nl7LXXSLEjL/Y+00HjNXJ4/crpcC5XE6hM=
 github.com/openmcp-project/openmcp-operator/api v1.1.0 h1:zw/knjSK7pkGuJNYOLp19nxqGy6YmOF9nGSqnG6X2cs=
 github.com/openmcp-project/openmcp-operator/api v1.1.0/go.mod h1:5JNdGyGH75zeS02WUSL2hkx40UuWaG0a5Mtmzk/yHFM=
 github.com/openmcp-project/openmcp-operator/api v1.2.0 h1:WZzGEJj+cA/DTmz2og4m1MZj6rOJ9GX+ZcWqGQCULVo=
