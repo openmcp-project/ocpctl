@@ -43,7 +43,8 @@ func PlatformFlux(opts *config.FluxSpec) ([]*resources.Resource, error) {
 		obj.SetNamespace(desired.GetNamespace())
 
 		res = append(res, &resources.Resource{
-			Object: obj,
+			Object:  obj,
+			ReadyFn: getReadyFn(obj),
 			MutateFn: func(_ context.Context) error {
 				for k, v := range desired.Object {
 					if !skipFields[k] {
@@ -57,6 +58,20 @@ func PlatformFlux(opts *config.FluxSpec) ([]*resources.Resource, error) {
 		})
 	}
 	return res, nil
+}
+
+func getReadyFn(obj *unstructured.Unstructured) resources.ReadyFn {
+	if obj.GetKind() != "Deployment" {
+		return nil
+	}
+	return func(_ context.Context) (bool, error) {
+		replicas, found, _ := unstructured.NestedInt64(obj.Object, "spec", "replicas")
+		if !found {
+			replicas = 1
+		}
+		available, _, _ := unstructured.NestedInt64(obj.Object, "status", "availableReplicas")
+		return available >= replicas, nil
+	}
 }
 
 func buildFluxOptions(opts *config.FluxSpec) fluxinstall.Options {
