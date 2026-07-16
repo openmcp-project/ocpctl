@@ -63,7 +63,8 @@ func PlatformFlux(opts *config.FluxSpec) ([]*resources.Resource, error) {
 }
 
 func getReadyFn(obj *unstructured.Unstructured) resources.ReadyFn {
-	if obj.GetKind() != "Deployment" {
+	gvk := obj.GroupVersionKind()
+	if gvk.Group != "apps" || gvk.Kind != "Deployment" {
 		return nil
 	}
 	return func(_ context.Context) (bool, error) {
