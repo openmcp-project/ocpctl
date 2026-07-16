@@ -155,3 +155,90 @@ func TestPlatformFlux_MutateFn_NoOverwriteSkippedFields(t *testing.T) {
 		}
 	}
 }
+
+func TestGetReadyFn(t *testing.T) {
+	tests := []struct {
+		name      string
+		kind      string
+		spec      map[string]any
+		status    map[string]any
+		wantReady bool
+		wantNil   bool
+		wantErr   bool
+	}{
+		{
+			name:      "available equals replicas",
+			kind:      "Deployment",
+			spec:      map[string]any{"replicas": int64(1)},
+			status:    map[string]any{"availableReplicas": int64(1)},
+			wantReady: true,
+		},
+		{
+			name:      "available less than replicas",
+			kind:      "Deployment",
+			spec:      map[string]any{"replicas": int64(2)},
+			status:    map[string]any{"availableReplicas": int64(1)},
+			wantReady: false,
+		},
+		{
+			name:      "no available",
+			kind:      "Deployment",
+			spec:      map[string]any{"replicas": int64(1)},
+			status:    map[string]any{"availableReplicas": int64(0)},
+			wantReady: false,
+		},
+		{
+			name:      "replicas not set defaults to 1",
+			kind:      "Deployment",
+			spec:      nil,
+			status:    map[string]any{"availableReplicas": int64(1)},
+			wantReady: true,
+		},
+		{
+			name:    "not deployment returns nil",
+			kind:    "NotDeployment",
+			wantNil: true,
+		},
+		{
+			name:    "invalid spec triggers error",
+			kind:    "Deployment",
+			spec:    map[string]any{"replicas": "not-a-number"},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			obj := &unstructured.Unstructured{Object: map[string]any{
+				"apiVersion": "apps/v1",
+				"kind":       tt.kind,
+				"spec":       tt.spec,
+				"status":     tt.status,
+			}}
+
+			fn := getReadyFn(obj)
+			if tt.wantNil {
+				if fn != nil {
+					t.Error("ready fn: want nil, have non-nil")
+				}
+				return
+			}
+			if fn == nil {
+				t.Fatal("ready fn: want non-nil, have nil")
+			}
+			got, err := fn(context.Background())
+			if tt.wantErr {
+				if err == nil {
+					t.Error("error: want err, have nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("ReadyFn error: %v", err)
+			}
+			if got != tt.wantReady {
+				t.Errorf("ready: want %v, have %v", tt.wantReady, got)
+			}
+		})
+	}
+}
