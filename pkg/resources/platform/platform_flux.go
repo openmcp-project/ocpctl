@@ -6,39 +6,26 @@ import (
 	"strings"
 
 	fluxinstall "github.com/fluxcd/flux2/v2/pkg/manifestgen/install"
+	"github.com/openmcp-project/ocpctl/pkg/config"
 	"github.com/openmcp-project/ocpctl/pkg/resources"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 )
 
-
-type FluxCD struct {
-	// Namespace is the Kubernetes namespace where FluxCD components will be installed.
-	// If empty, defaults to "flux-system".
-	Namespace string
+var skipFields = map[string]bool{
+	"apiVersion": true,
+	"kind":       true,
+	"metadata":   true,
+	"status":     true,
 }
 
-func (f *FluxCD) PlatformFlux() ([]*resources.Resource, error) {
-	// Use configured namespace or default to "flux-system"
-	namespace := f.Namespace
-	if namespace == "" {
-		namespace = "flux-system"
-	}
-
-	// Generate the Flux installation manifests
-	options := fluxinstall.MakeDefaultOptions()
-	options.Namespace = namespace
-	options.Components = []string{
-		"source-controller",
-		"kustomize-controller",
-		"helm-controller",
-		"notification-controller",
-	}
+func PlatformFlux(opts *config.FluxSpec) ([]*resources.Resource, error) {
+	options := buildFluxOptions(opts)
 	manifest, err := fluxinstall.Generate(options, "")
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate flux manifests: %w", err)
 	}
+
 	var res []*resources.Resource
 	for m := range strings.SplitSeq(manifest.Content, "---\n") {
 		if strings.TrimSpace(m) == "" {
@@ -58,12 +45,8 @@ func (f *FluxCD) PlatformFlux() ([]*resources.Resource, error) {
 		res = append(res, &resources.Resource{
 			Object: obj,
 			MutateFn: func(_ context.Context) error {
-				serverOwned := map[string]bool{
-					"apiVersion": true, "kind": true,
-					"metadata": true, "status": true,
-				}
 				for k, v := range desired.Object {
-					if !serverOwned[k] {
+					if !skipFields[k] {
 						obj.Object[k] = v
 					}
 				}
@@ -74,4 +57,45 @@ func (f *FluxCD) PlatformFlux() ([]*resources.Resource, error) {
 		})
 	}
 	return res, nil
+}
+
+func buildFluxOptions(opts *config.FluxSpec) fluxinstall.Options {
+	options := fluxinstall.MakeDefaultOptions()
+	if opts == nil {
+		return options
+	}
+	if opts.Namespace != "" {
+		options.Namespace = opts.Namespace
+	}
+	if opts.Version != "" {
+		options.Version = opts.Version
+	}
+	if len(opts.Components) > 0 {
+		options.Components = opts.Components
+	}
+	if len(opts.ComponentsExtra) > 0 {
+		options.ComponentsExtra = opts.ComponentsExtra
+	}
+	if opts.Registry != "" {
+		options.Registry = opts.Registry
+	}
+	if opts.RegistryCredential != "" {
+		options.RegistryCredential = opts.RegistryCredential
+	}
+	if opts.ImagePullSecret != "" {
+		options.ImagePullSecret = opts.ImagePullSecret
+	}
+	if opts.LogLevel != "" {
+		options.LogLevel = opts.LogLevel
+	}
+	if opts.ClusterDomain != "" {
+		options.ClusterDomain = opts.ClusterDomain
+	}
+	if opts.EventsAddr != "" {
+		options.EventsAddr = opts.EventsAddr
+	}
+	if opts.Timeout != 0 {
+		options.Timeout = opts.Timeout
+	}
+	return options
 }

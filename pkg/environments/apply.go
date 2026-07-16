@@ -81,11 +81,10 @@ func applyPlatformResources(ctx context.Context, environment string, cfg *config
 		platform.PlatformCluster(environment, ns, deployment),
 		platform.ClusterProvider(clusterProviderImage, deployment),
 	)
-	flux := platform.FluxCD{}
-	fluxResources, err := flux.PlatformFlux()
 
+	fluxResources, err := platform.PlatformFlux(cfg.Spec.Flux)
 	if err != nil {
-		return fmt.Errorf("creating flux installatio: %w", err)
+		return fmt.Errorf("generating flux resources: %w", err)
 	}
 	platformCluster.AddResources(fluxResources...)
 

@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"time"
 
 	"sigs.k8s.io/yaml"
 )
@@ -41,6 +42,9 @@ func Merge(base, overlay *Environment) *Environment {
 	}
 	if overlay.Spec.Operator.Image != "" {
 		result.Spec.Operator.Image = overlay.Spec.Operator.Image
+	}
+	if overlay.Spec.Flux != nil {
+		result.Spec.Flux = overlay.Spec.Flux
 	}
 	result.Spec.ClusterProviders = mergeComponents(base.Spec.ClusterProviders, overlay.Spec.ClusterProviders)
 	result.Spec.ServiceProviders = mergeComponents(base.Spec.ServiceProviders, overlay.Spec.ServiceProviders)
@@ -84,6 +88,7 @@ type EnvironmentSpec struct {
 	ClusterProviders []ComponentSpec `json:"clusterProviders"`
 	ServiceProviders []ComponentSpec `json:"serviceProviders"`
 	PlatformServices []ComponentSpec `json:"platformServices"`
+	Flux             *FluxSpec       `json:"flux"`
 }
 
 type OperatorSpec struct {
@@ -93,4 +98,20 @@ type OperatorSpec struct {
 type ComponentSpec struct {
 	Name  string `json:"name"`
 	Image string `json:"image"`
+}
+
+type FluxSpec struct {
+	BaseURL            string        `json:"baseURL"`
+	Version            string        `json:"version"`
+	Namespace          string        `json:"namespace"`
+	Components         []string      `json:"components"`
+	ComponentsExtra    []string      `json:"componentsExtra"`
+	EventsAddr         string        `json:"eventsAddr"`
+	Registry           string        `json:"registry"`
+	RegistryCredential string        `json:"registryCredential"`
+	ImagePullSecret    string        `json:"imagePullSecret"`
+	LogLevel           string        `json:"logLevel"`
+	ManifestFile       string        `json:"manifestFile"`
+	Timeout            time.Duration `json:"timeout"`
+	ClusterDomain      string        `json:"clusterDomain"`
 }
