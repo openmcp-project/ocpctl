@@ -4,7 +4,6 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
-	"time"
 
 	"sigs.k8s.io/yaml"
 )
@@ -101,17 +100,16 @@ type ComponentSpec struct {
 }
 
 type FluxSpec struct {
-	BaseURL            string        `json:"baseURL"`
-	Version            string        `json:"version"`
-	Namespace          string        `json:"namespace"`
-	Components         []string      `json:"components"`
-	ComponentsExtra    []string      `json:"componentsExtra"`
-	EventsAddr         string        `json:"eventsAddr"`
-	Registry           string        `json:"registry"`
-	RegistryCredential string        `json:"registryCredential"`
-	ImagePullSecret    string        `json:"imagePullSecret"`
-	LogLevel           string        `json:"logLevel"`
-	ManifestFile       string        `json:"manifestFile"`
-	Timeout            time.Duration `json:"timeout"`
-	ClusterDomain      string        `json:"clusterDomain"`
+	BaseURL            string   `json:"baseURL"`
+	Version            string   `json:"version"`
+	Namespace          string   `json:"namespace"`
+	Components         []string `json:"components"`
+	ComponentsExtra    []string `json:"componentsExtra"`
+	EventsAddr         string   `json:"eventsAddr"`
+	Registry           string   `json:"registry"`
+	RegistryCredential string   `json:"registryCredential"`
+	ImagePullSecret    string   `json:"imagePullSecret"`
+	LogLevel           string   `json:"logLevel"`
+	ManifestFile       string   `json:"manifestFile"`
+	ClusterDomain      string   `json:"clusterDomain"`
 }

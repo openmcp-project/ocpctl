@@ -109,8 +109,5 @@ func buildFluxOptions(opts *config.FluxSpec) fluxinstall.Options {
 	if opts.EventsAddr != "" {
 		options.EventsAddr = opts.EventsAddr
 	}
-	if opts.Timeout != 0 {
-		options.Timeout = opts.Timeout
-	}
 	return options
 }
