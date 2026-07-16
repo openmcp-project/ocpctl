@@ -8,7 +8,9 @@ import (
 	fluxinstall "github.com/fluxcd/flux2/v2/pkg/manifestgen/install"
 	"github.com/openmcp-project/ocpctl/pkg/config"
 	"github.com/openmcp-project/ocpctl/pkg/resources"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 )
 
@@ -65,12 +67,15 @@ func getReadyFn(obj *unstructured.Unstructured) resources.ReadyFn {
 		return nil
 	}
 	return func(_ context.Context) (bool, error) {
-		replicas, found, _ := unstructured.NestedInt64(obj.Object, "spec", "replicas")
-		if !found {
-			replicas = 1
+		deployment := &appsv1.Deployment{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, deployment); err != nil {
+			return false, err
 		}
-		available, _, _ := unstructured.NestedInt64(obj.Object, "status", "availableReplicas")
-		return available >= replicas, nil
+		replicas := int32(1)
+		if deployment.Spec.Replicas != nil {
+			replicas = *deployment.Spec.Replicas
+		}
+		return deployment.Status.AvailableReplicas >= replicas, nil
 	}
 }
 
