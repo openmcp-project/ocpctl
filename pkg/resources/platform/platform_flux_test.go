@@ -167,35 +167,28 @@ func TestGetReadyFn(t *testing.T) {
 		wantErr   bool
 	}{
 		{
-			name:      "available equals replicas",
+			name:      "ready replicas equals replicas",
 			kind:      "Deployment",
 			spec:      map[string]any{"replicas": int64(1)},
-			status:    map[string]any{"availableReplicas": int64(1)},
+			status:    map[string]any{"readyReplicas": int64(1)},
 			wantReady: true,
 		},
 		{
-			name:      "available less than replicas",
+			name:      "ready replicas less than replicas",
 			kind:      "Deployment",
 			spec:      map[string]any{"replicas": int64(2)},
-			status:    map[string]any{"availableReplicas": int64(1)},
+			status:    map[string]any{"readyReplicas": int64(1)},
 			wantReady: false,
 		},
 		{
-			name:      "no available",
+			name:      "nil replicas defaults to 1",
 			kind:      "Deployment",
-			spec:      map[string]any{"replicas": int64(1)},
-			status:    map[string]any{"availableReplicas": int64(0)},
-			wantReady: false,
-		},
-		{
-			name:      "replicas not set defaults to 1",
-			kind:      "Deployment",
-			spec:      nil,
-			status:    map[string]any{"availableReplicas": int64(1)},
+			spec:      map[string]any{},
+			status:    map[string]any{"readyReplicas": int64(1)},
 			wantReady: true,
 		},
 		{
-			name:    "not deployment returns nil",
+			name:    "not kind deployment returns nil",
 			kind:    "NotDeployment",
 			wantNil: true,
 		},

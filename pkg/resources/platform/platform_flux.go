@@ -48,6 +48,7 @@ func PlatformFlux(opts *config.FluxSpec) ([]*resources.Resource, error) {
 			Object:  obj,
 			ReadyFn: getReadyFn(obj),
 			MutateFn: func(_ context.Context) error {
+				desired := desired.DeepCopy()
 				for k, v := range desired.Object {
 					if !skipFields[k] {
 						obj.Object[k] = v
@@ -72,30 +73,28 @@ func getReadyFn(obj *unstructured.Unstructured) resources.ReadyFn {
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, deployment); err != nil {
 			return false, err
 		}
-		replicas := int32(1)
-		if deployment.Spec.Replicas != nil {
-			replicas = *deployment.Spec.Replicas
+		if deployment.Generation != deployment.Status.ObservedGeneration {
+			return false, nil
 		}
-		return deployment.Status.AvailableReplicas >= replicas, nil
+		desired := int32(1)
+		if deployment.Spec.Replicas != nil {
+			desired = *deployment.Spec.Replicas
+		}
+		return deployment.Status.ReadyReplicas >= desired, nil
 	}
 }
 
 func buildFluxOptions(opts *config.FluxSpec) fluxinstall.Options {
 	options := fluxinstall.MakeDefaultOptions()
+	options.ComponentsExtra = []string{}
 	if opts == nil {
 		return options
-	}
-	if opts.Namespace != "" {
-		options.Namespace = opts.Namespace
 	}
 	if opts.Version != "" {
 		options.Version = opts.Version
 	}
-	if len(opts.Components) > 0 {
-		options.Components = opts.Components
-	}
-	if len(opts.ComponentsExtra) > 0 {
-		options.ComponentsExtra = opts.ComponentsExtra
+	if opts.Namespace != "" {
+		options.Namespace = opts.Namespace
 	}
 	if opts.Registry != "" {
 		options.Registry = opts.Registry
@@ -106,14 +105,23 @@ func buildFluxOptions(opts *config.FluxSpec) fluxinstall.Options {
 	if opts.ImagePullSecret != "" {
 		options.ImagePullSecret = opts.ImagePullSecret
 	}
+	if opts.BaseURL != "" {
+		options.BaseURL = opts.BaseURL
+	}
 	if opts.LogLevel != "" {
 		options.LogLevel = opts.LogLevel
+	}
+	if opts.ComponentsExtra != nil {
+		options.ComponentsExtra = opts.ComponentsExtra
 	}
 	if opts.ClusterDomain != "" {
 		options.ClusterDomain = opts.ClusterDomain
 	}
-	if opts.EventsAddr != "" {
-		options.EventsAddr = opts.EventsAddr
+	if opts.NetworkPolicy != nil {
+		options.NetworkPolicy = *opts.NetworkPolicy
+	}
+	if opts.TolerationKeys != nil {
+		options.TolerationKeys = opts.TolerationKeys
 	}
 	return options
 }
