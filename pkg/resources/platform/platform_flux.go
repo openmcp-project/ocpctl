@@ -54,8 +54,6 @@ func PlatformFlux(opts *config.FluxSpec) ([]*resources.Resource, error) {
 						obj.Object[k] = v
 					}
 				}
-				obj.SetLabels(desired.GetLabels())
-				obj.SetAnnotations(desired.GetAnnotations())
 				return nil
 			},
 		})
