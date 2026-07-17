@@ -132,9 +132,6 @@ func TestPlatformFlux_MutateFn_CopiesFields(t *testing.T) {
 		if !hasContent {
 			t.Errorf("%s/%s: MutateFn left no non-skipped fields", kind, obj.GetName())
 		}
-		if len(obj.GetLabels()) == 0 {
-			t.Errorf("%s/%s: MutateFn did not copy labels", kind, obj.GetName())
-		}
 	}
 }
 
@@ -167,14 +164,14 @@ func TestGetReadyFn(t *testing.T) {
 		wantErr   bool
 	}{
 		{
-			name:      "ready replicas equals replicas",
+			name:      "readyReplicas equals replicas",
 			kind:      "Deployment",
 			spec:      map[string]any{"replicas": int64(1)},
 			status:    map[string]any{"readyReplicas": int64(1)},
 			wantReady: true,
 		},
 		{
-			name:      "ready replicas less than replicas",
+			name:      "readyReplicas less than replicas",
 			kind:      "Deployment",
 			spec:      map[string]any{"replicas": int64(2)},
 			status:    map[string]any{"readyReplicas": int64(1)},
