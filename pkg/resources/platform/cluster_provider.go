@@ -16,6 +16,7 @@ import (
 func ClusterProvider(image string, deployment *appsv1.Deployment) *resources.Resource {
 	provider := &v1alpha1.ClusterProvider{
 		ObjectMeta: metav1.ObjectMeta{
+			// TODO: make provider name configurable when ClusterProvider interface is fully wired
 			Name: "kind",
 		},
 	}

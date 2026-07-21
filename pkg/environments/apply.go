@@ -42,13 +42,11 @@ func applyPlatformResources(ctx context.Context, environment string, cfg *config
 
 	clusterProviderImage := ""
 	for _, cp := range cfg.Spec.ClusterProviders {
-		if cp.Name == "kind" {
-			clusterProviderImage = cp.Image
-			break
-		}
+		clusterProviderImage = cp.Image
+		break
 	}
 	if clusterProviderImage == "" {
-		return fmt.Errorf("no cluster provider for kind configured")
+		return fmt.Errorf("no cluster provider configured")
 	}
 	if cfg.Spec.Namespace == "" {
 		return fmt.Errorf("namespace must not be empty")
