@@ -104,7 +104,7 @@ func TestOperatorDeployment_MutateFn(t *testing.T) {
 		t.Errorf("container image = %q, want %q", main.Image, operatorImage)
 	}
 	if !slices.Contains(main.Args, "run") {
-		t.Errorf("container args %v do not contain init command", main.Args)
+		t.Errorf("container args %v do not contain run command", main.Args)
 	}
 	if !slices.Contains(main.Args, "test-env") {
 		t.Errorf("container args %v do not contain environment", main.Args)
@@ -113,10 +113,10 @@ func TestOperatorDeployment_MutateFn(t *testing.T) {
 		t.Errorf("container args %v do not config path", main.Args)
 	}
 	if main.VolumeMounts[0].MountPath != "/etc/openmcp-operator" {
-		t.Errorf("init container volume mount path = %q, want %q", init.VolumeMounts[0].MountPath, "/etc/openmcp-operator")
+		t.Errorf("main container volume mount path = %q, want %q", main.VolumeMounts[0].MountPath, "/etc/openmcp-operator")
 	}
 	if main.VolumeMounts[0].Name != "config" {
-		t.Errorf("init container volume mount name = %q, want %q", init.VolumeMounts[0].Name, "config")
+		t.Errorf("main container volume mount name = %q, want %q", main.VolumeMounts[0].Name, "config")
 	}
 	testPodEnv(t, "main", main.Env)
 
