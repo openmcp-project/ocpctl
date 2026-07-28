@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"testing"
 )
 
@@ -42,7 +43,67 @@ func TestDefaultContainsExpectedComponents(t *testing.T) {
 }
 
 func TestLoad(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		wantErr bool
+		check   func(*testing.T, *Environment)
+	}{
+		{
+			name: "valid config",
+			content: `apiVersion: ocpctl.open-control-plane.io/v1alpha1
+kind: Environment
+spec:
+  namespace: my-ns
+  serviceProviders:
+    - name: flux
+      image: ghcr.io/flux:v1.0.0
+`,
+			check: func(t *testing.T, e *Environment) {
+				if e.Spec.Namespace != "my-ns" {
+					t.Errorf("namespace = %q, want %q", e.Spec.Namespace, "my-ns")
+				}
+				if len(e.Spec.ServiceProviders) != 1 || e.Spec.ServiceProviders[0].Name != "flux" {
+					t.Errorf("unexpected service providers: %v", e.Spec.ServiceProviders)
+				}
+			},
+		},
+		{
+			name:    "file not found",
+			wantErr: true,
+		},
+		{
+			name:    "invalid yaml",
+			content: "not-valid-yaml",
+			wantErr: true,
+		},
+	}
 
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := "nonexistent.yaml"
+			if tt.content != "" {
+				f, err := os.CreateTemp(t.TempDir(), "*.yaml")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(f.Name(), []byte(tt.content), 0600); err != nil {
+					t.Fatal(err)
+				}
+				path = f.Name()
+			}
+			got, err := Load(path)
+			if tt.wantErr && err == nil {
+				t.Fatal("Load() expected error, got nil")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("Load() unexpected error: %v", err)
+			}
+			if tt.check != nil && got != nil {
+				tt.check(t, got)
+			}
+		})
+	}
 }
 
 func TestMergeComponents(t *testing.T) {
