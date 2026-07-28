@@ -53,7 +53,7 @@ func TestManager_Apply(t *testing.T) {
 		wantApplied int
 		wantWaiting int
 		wantReady   int
-		verify      func(*testing.T, *Manager)
+		valFunc     func(*testing.T, *Manager)
 	}{
 		{
 			name:        "creates resource",
@@ -99,7 +99,7 @@ func TestManager_Apply(t *testing.T) {
 			}(),
 			wantApplied: 1,
 			wantReady:   1,
-			verify: func(t *testing.T, m *Manager) {
+			valFunc: func(t *testing.T, m *Manager) {
 				ns := m.Clusters[0].Resources[0].Object.(*corev1.Namespace)
 				if ns.Labels["mutated"] != "true" {
 					t.Errorf("label mutated = %q, want %q", ns.Labels["mutated"], "true")
@@ -133,8 +133,8 @@ func TestManager_Apply(t *testing.T) {
 			if len(summary.Ready) != tt.wantReady {
 				t.Errorf("Ready = %d, want %d", len(summary.Ready), tt.wantReady)
 			}
-			if tt.verify != nil {
-				tt.verify(t, m)
+			if tt.valFunc != nil {
+				tt.valFunc(t, m)
 			}
 		})
 	}

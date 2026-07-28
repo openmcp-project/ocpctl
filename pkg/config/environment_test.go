@@ -47,7 +47,7 @@ func TestLoad(t *testing.T) {
 		name    string
 		content string
 		wantErr bool
-		check   func(*testing.T, *Environment)
+		valFunc func(*testing.T, *Environment)
 	}{
 		{
 			name: "valid config",
@@ -57,9 +57,9 @@ spec:
   namespace: my-ns
   serviceProviders:
     - name: flux
-      image: ghcr.io/flux:v1.0.0
+      image: ghcr.io/openmcp-project/images/service-provider-flux:v1.0.0
 `,
-			check: func(t *testing.T, e *Environment) {
+			valFunc: func(t *testing.T, e *Environment) {
 				if e.Spec.Namespace != "my-ns" {
 					t.Errorf("namespace = %q, want %q", e.Spec.Namespace, "my-ns")
 				}
@@ -94,13 +94,13 @@ spec:
 			}
 			got, err := Load(path)
 			if tt.wantErr && err == nil {
-				t.Fatal("Load() expected error, got nil")
+				t.Fatal("expected error, got nil")
 			}
 			if !tt.wantErr && err != nil {
-				t.Fatalf("Load() unexpected error: %v", err)
+				t.Fatalf("unexpected error: %v", err)
 			}
-			if tt.check != nil && got != nil {
-				tt.check(t, got)
+			if tt.valFunc != nil && got != nil {
+				tt.valFunc(t, got)
 			}
 		})
 	}
