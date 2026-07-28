@@ -65,8 +65,8 @@ func TestOperatorDeployment_MutateFn(t *testing.T) {
 	if deployment.Spec.Selector.MatchLabels["app"] != "openmcp-operator" {
 		t.Errorf("selector label got %q, want %q", deployment.Spec.Selector.MatchLabels["app"], "openmcp-operator")
 	}
-	if deployment.Spec.Template.ObjectMeta.Labels["app"] != "openmcp-operator" {
-		t.Errorf("pod template label got %q, want %q", deployment.Spec.Template.ObjectMeta.Labels["app"], "openmcp-operator")
+	if deployment.Spec.Template.Labels["app"] != "openmcp-operator" {
+		t.Errorf("pod template label got %q, want %q", deployment.Spec.Template.Labels["app"], "openmcp-operator")
 	}
 	if deployment.Spec.Template.Spec.ServiceAccountName != sa.Name {
 		t.Errorf("serviceAccountName = %q, want %q", deployment.Spec.Template.Spec.ServiceAccountName, sa.Name)
