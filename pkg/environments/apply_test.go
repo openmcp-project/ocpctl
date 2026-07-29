@@ -16,14 +16,6 @@ const (
 	operatorImage = "ghcr.io/openmcp-project/images/openmcp-operator:v1.3.0"
 )
 
-var baseConfig = config.Environment{
-	Spec: config.EnvironmentSpec{
-		Namespace:        "test-ns",
-		ClusterProviders: []config.ComponentSpec{{Name: "kind", Image: "ghcr.io/openmcp-project/images/cluster-provider-kind:v0.5.0"}},
-		Operator:         config.OperatorSpec{Image: "operator:v1"},
-	},
-}
-
 func TestBuildPlatformResources(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -106,10 +98,6 @@ func TestBuildPlatformResources(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.fp.client == nil && tt.fp.clientErr == nil {
-				tt.fp.client = fake.NewClientBuilder().Build()
-			}
-
 			manager, err := buildPlatformResources("test", &tt.cfg, &tt.fp)
 
 			if tt.wantErr != "" {
@@ -168,6 +156,13 @@ func TestApply(t *testing.T) {
 			}
 			ctx, cancel := context.WithCancel(logging.IntoContext(context.Background(), log))
 			cancel()
+			baseConfig := config.Environment{
+				Spec: config.EnvironmentSpec{
+					Namespace:        "test-ns",
+					ClusterProviders: []config.ComponentSpec{{Name: "kind", Image: kindImage}},
+					Operator:         config.OperatorSpec{Image: operatorImage},
+				},
+			}
 			err = Apply(ctx, "test", &baseConfig, &fp)
 
 			if tt.wantEnsureCalled && fp.ensureCalledWith != "test" {
