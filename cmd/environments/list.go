@@ -3,6 +3,7 @@ package environments
 import (
 	"fmt"
 
+	"github.com/openmcp-project/ocpctl/pkg/clusters"
 	envpkg "github.com/openmcp-project/ocpctl/pkg/environments"
 	"github.com/spf13/cobra"
 )
@@ -15,7 +16,7 @@ func newListCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			environments, err := envpkg.List(ctx)
+			environments, err := envpkg.List(ctx, &clusters.ProviderKind{})
 			if err != nil {
 				return err
 			}

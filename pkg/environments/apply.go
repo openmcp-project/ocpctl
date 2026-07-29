@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/openmcp-project/ocpctl/pkg/clusters"
 	"github.com/openmcp-project/ocpctl/pkg/config"
 	"github.com/openmcp-project/ocpctl/pkg/logging"
 	"github.com/openmcp-project/ocpctl/pkg/resources"
@@ -15,11 +14,11 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
-func Apply(ctx context.Context, name string, cfg *config.Environment) error {
+func Apply(ctx context.Context, name string, cfg *config.Environment, cp ClusterProvider) error {
 	log := logging.FromContext(ctx)
 
 	log.Infof("Ensuring platform cluster for environment %q", name)
-	created, err := clusters.EnsurePlatformCluster(name)
+	created, err := cp.EnsurePlatformCluster(name)
 	if err != nil {
 		return fmt.Errorf("ensuring platform cluster: %w", err)
 	}
@@ -29,7 +28,7 @@ func Apply(ctx context.Context, name string, cfg *config.Environment) error {
 		log.Info("Platform cluster already exists")
 	}
 
-	if err := applyPlatformResources(ctx, name, cfg); err != nil {
+	if err := applyPlatformResources(ctx, name, cfg, cp); err != nil {
 		return err
 	}
 
@@ -37,27 +36,60 @@ func Apply(ctx context.Context, name string, cfg *config.Environment) error {
 	return nil
 }
 
-func applyPlatformResources(ctx context.Context, environment string, cfg *config.Environment) error {
+func applyPlatformResources(ctx context.Context, environment string, cfg *config.Environment, cp ClusterProvider) error {
 	log := logging.FromContext(ctx)
 
+	log.Info("Building platform cluster client")
+	manager, err := buildPlatformResources(environment, cfg, cp)
+	if err != nil {
+		return err
+	}
+
+	log.Info("Applying platform resources")
+	for {
+		summary, err := manager.Apply(ctx)
+		if err != nil {
+			return fmt.Errorf("applying resources: %w", err)
+		}
+		log.Infof("Applied: %d/%d, Ready: %d/%d, Waiting for dependencies: %d", len(summary.Applied), summary.Total(), len(summary.Ready), summary.Total(), len(summary.WaitingForDeps))
+		if len(summary.Ready) == summary.Total() {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			readySet := make(map[string]bool, len(summary.Ready))
+			for _, r := range summary.Ready {
+				readySet[r.String()] = true
+			}
+			for _, r := range summary.Applied {
+				if !readySet[r.String()] {
+					log.Infof("Not ready: %s", r)
+				}
+			}
+			return ctx.Err()
+		case <-time.After(5 * time.Second):
+		}
+	}
+}
+
+func buildPlatformResources(environment string, cfg *config.Environment, cp ClusterProvider) (*resources.Manager, error) {
 	clusterProviderImage := ""
-	for _, cp := range cfg.Spec.ClusterProviders {
-		if cp.Name == "kind" {
-			clusterProviderImage = cp.Image
+	for _, cpSpec := range cfg.Spec.ClusterProviders {
+		if cpSpec.Name == "kind" {
+			clusterProviderImage = cpSpec.Image
 			break
 		}
 	}
 	if clusterProviderImage == "" {
-		return fmt.Errorf("no cluster provider for kind configured")
+		return nil, fmt.Errorf("no cluster provider for kind configured")
 	}
 	if cfg.Spec.Namespace == "" {
-		return fmt.Errorf("namespace must not be empty")
+		return nil, fmt.Errorf("namespace must not be empty")
 	}
 
-	log.Info("Building platform cluster client")
-	c, err := clusters.PlatformClusterClient(environment)
+	c, err := cp.PlatformClusterClient(environment)
 	if err != nil {
-		return fmt.Errorf("building platform cluster client: %w", err)
+		return nil, fmt.Errorf("building platform cluster client: %w", err)
 	}
 
 	nsResource := platform.OperatorNamespace(cfg.Spec.Namespace)
@@ -94,30 +126,5 @@ func applyPlatformResources(ctx context.Context, environment string, cfg *config
 
 	manager := &resources.Manager{}
 	manager.AddClusters(platformCluster)
-
-	log.Info("Applying platform resources")
-	for {
-		summary, err := manager.Apply(ctx)
-		if err != nil {
-			return fmt.Errorf("applying resources: %w", err)
-		}
-		log.Infof("Applied: %d/%d, Ready: %d/%d, Waiting for dependencies: %d", len(summary.Applied), summary.Total(), len(summary.Ready), summary.Total(), len(summary.WaitingForDeps))
-		if len(summary.Ready) == summary.Total() {
-			return nil
-		}
-		select {
-		case <-ctx.Done():
-			readySet := make(map[string]bool, len(summary.Ready))
-			for _, r := range summary.Ready {
-				readySet[r.String()] = true
-			}
-			for _, r := range summary.Applied {
-				if !readySet[r.String()] {
-					log.Infof("Not ready: %s", r)
-				}
-			}
-			return ctx.Err()
-		case <-time.After(5 * time.Second):
-		}
-	}
+	return manager, nil
 }
