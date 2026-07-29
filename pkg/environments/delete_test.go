@@ -15,7 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func clusterWithKindStatus(name, kindClusterName string) *clustersv1alpha1.Cluster {
+func clusterWithStatus(t *testing.T, name, kindClusterName string) *clustersv1alpha1.Cluster {
+	t.Helper()
 	cl := &clustersv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	ps := kindv1alpha1.ClusterStatus{
 		TypeMeta: metav1.TypeMeta{
@@ -25,7 +26,7 @@ func clusterWithKindStatus(name, kindClusterName string) *clustersv1alpha1.Clust
 		KindClusterName: kindClusterName,
 	}
 	if err := cl.Status.SetProviderStatus(ps); err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	return cl
 }
@@ -57,22 +58,22 @@ func TestDelete(t *testing.T) {
 		{
 			name: "single kind cluster is deleted",
 			clusters: []client.Object{
-				clusterWithKindStatus("onboarding", "onboarding"),
+				clusterWithStatus(t, "onboarding", "onboarding"),
 			},
 			wantDeleted: []string{"onboarding"},
 		},
 		{
 			name: "platform cluster is deleted last",
 			clusters: []client.Object{
-				clusterWithKindStatus("platform", "platform"),
-				clusterWithKindStatus("onboarding", "onboarding"),
+				clusterWithStatus(t, "platform", "platform"),
+				clusterWithStatus(t, "onboarding", "onboarding"),
 			},
 			wantDeleted: []string{"onboarding", "platform"},
 		},
 		{
 			name: "delete error is returned",
 			clusters: []client.Object{
-				clusterWithKindStatus("onboarding", "onboarding"),
+				clusterWithStatus(t, "onboarding", "onboarding"),
 			},
 			fp:      fakeProvider{deleteErr: fmt.Errorf("delete error")},
 			wantErr: "deleting kind cluster",
@@ -81,7 +82,7 @@ func TestDelete(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.fp.clientErr == nil {
+			if tt.fp.client == nil && tt.fp.clientErr == nil {
 				s := runtime.NewScheme()
 				if err := clustersv1alpha1.AddToScheme(s); err != nil {
 					t.Fatal(err)

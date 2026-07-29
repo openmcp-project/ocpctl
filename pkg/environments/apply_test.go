@@ -56,7 +56,7 @@ func TestBuildPlatformResources(t *testing.T) {
 			wantErr: "building platform cluster client",
 		},
 		{
-			name: "base cluster provider and operator only",
+			name: "base (cluster provider and operator) only",
 			cfg: config.Environment{
 				Spec: config.EnvironmentSpec{
 					Namespace:        "test-ns",
@@ -146,30 +146,35 @@ func TestApply(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fp := tt.fp
-			if fp.client == nil && fp.clientErr == nil {
-				fp.client = fake.NewClientBuilder().Build()
+			if tt.fp.client == nil && tt.fp.clientErr == nil {
+				tt.fp.client = fake.NewClientBuilder().Build()
 			}
+
 			log, err := logging.NewLogger(false)
 			if err != nil {
 				t.Fatal(err)
 			}
+			// Cancel context to verify EnsurePlatformCluster was called without faking the full apply path
 			ctx, cancel := context.WithCancel(logging.IntoContext(context.Background(), log))
 			cancel()
-			baseConfig := config.Environment{
+
+			envConfig := config.Environment{
 				Spec: config.EnvironmentSpec{
 					Namespace:        "test-ns",
 					ClusterProviders: []config.ComponentSpec{{Name: "kind", Image: kindImage}},
 					Operator:         config.OperatorSpec{Image: operatorImage},
 				},
 			}
-			err = Apply(ctx, "test", &baseConfig, &fp)
 
-			if tt.wantEnsureCalled && fp.ensureCalledWith != "test" {
-				t.Errorf("EnsurePlatformCluster called with %q, want %q", fp.ensureCalledWith, "test")
-			}
+			err = Apply(ctx, "test", &envConfig, &tt.fp)
 
 			if tt.wantEnsureCalled {
+				if tt.fp.ensureCalledWith != "test" {
+					t.Errorf("EnsurePlatformCluster called with %q, want %q", tt.fp.ensureCalledWith, "test")
+				}
+				if err != context.Canceled {
+					t.Errorf("Apply returned %v, want context.Canceled", err)
+				}
 				return
 			}
 			if err == nil {
