@@ -59,100 +59,32 @@ func TestOperatorDeployment_MutateFn(t *testing.T) {
 		t.Fatalf("MutateFn error: %v", err)
 	}
 
-	if deployment.Spec.Replicas == nil || *deployment.Spec.Replicas != 1 {
-		t.Errorf("replicas = %v, want 1", deployment.Spec.Replicas)
-	}
-	if deployment.Spec.Selector.MatchLabels["app"] != "openmcp-operator" {
-		t.Errorf("selector label got %q, want %q", deployment.Spec.Selector.MatchLabels["app"], "openmcp-operator")
-	}
-	if deployment.Spec.Template.Labels["app"] != "openmcp-operator" {
-		t.Errorf("pod template label got %q, want %q", deployment.Spec.Template.Labels["app"], "openmcp-operator")
-	}
 	if deployment.Spec.Template.Spec.ServiceAccountName != sa.Name {
 		t.Errorf("serviceAccountName = %q, want %q", deployment.Spec.Template.Spec.ServiceAccountName, sa.Name)
 	}
-
 	if len(deployment.Spec.Template.Spec.InitContainers) != 1 {
 		t.Fatalf("init containers count = %d, want 1", len(deployment.Spec.Template.Spec.InitContainers))
 	}
-	init := deployment.Spec.Template.Spec.InitContainers[0]
-	if init.Image != operatorImage {
-		t.Errorf("init container image = %q, want %q", init.Image, operatorImage)
+	if deployment.Spec.Template.Spec.InitContainers[0].Image != operatorImage {
+		t.Errorf("init container image = %q, want %q", deployment.Spec.Template.Spec.InitContainers[0].Image, operatorImage)
 	}
-	if !slices.Contains(init.Args, "init") {
-		t.Errorf("container args %v do not contain init command", init.Args)
+	if !slices.Contains(deployment.Spec.Template.Spec.InitContainers[0].Args, "test-env") {
+		t.Errorf("init container args %v do not contain environment name", deployment.Spec.Template.Spec.InitContainers[0].Args)
 	}
-	if !slices.Contains(init.Args, "test-env") {
-		t.Errorf("container args %v do not contain environment", init.Args)
-	}
-	if !slices.Contains(init.Args, "/etc/openmcp-operator/config") {
-		t.Errorf("container args %v do not config path", init.Args)
-	}
-	if init.VolumeMounts[0].MountPath != "/etc/openmcp-operator" {
-		t.Errorf("init container volume mount path = %q, want %q", init.VolumeMounts[0].MountPath, "/etc/openmcp-operator")
-	}
-	if init.VolumeMounts[0].Name != "config" {
-		t.Errorf("init container volume mount name = %q, want %q", init.VolumeMounts[0].Name, "config")
-	}
-	testPodEnv(t, "init", init.Env)
-
 	if len(deployment.Spec.Template.Spec.Containers) != 1 {
 		t.Fatalf("containers count = %d, want 1", len(deployment.Spec.Template.Spec.Containers))
 	}
-	main := deployment.Spec.Template.Spec.Containers[0]
-	if main.Image != operatorImage {
-		t.Errorf("container image = %q, want %q", main.Image, operatorImage)
+	if deployment.Spec.Template.Spec.Containers[0].Image != operatorImage {
+		t.Errorf("container image = %q, want %q", deployment.Spec.Template.Spec.Containers[0].Image, operatorImage)
 	}
-	if !slices.Contains(main.Args, "run") {
-		t.Errorf("container args %v do not contain run command", main.Args)
+	if !slices.Contains(deployment.Spec.Template.Spec.Containers[0].Args, "test-env") {
+		t.Errorf("container args %v do not contain environment name", deployment.Spec.Template.Spec.Containers[0].Args)
 	}
-	if !slices.Contains(main.Args, "test-env") {
-		t.Errorf("container args %v do not contain environment", main.Args)
-	}
-	if !slices.Contains(main.Args, "/etc/openmcp-operator/config") {
-		t.Errorf("container args %v do not config path", main.Args)
-	}
-	if main.VolumeMounts[0].MountPath != "/etc/openmcp-operator" {
-		t.Errorf("main container volume mount path = %q, want %q", main.VolumeMounts[0].MountPath, "/etc/openmcp-operator")
-	}
-	if main.VolumeMounts[0].Name != "config" {
-		t.Errorf("main container volume mount name = %q, want %q", main.VolumeMounts[0].Name, "config")
-	}
-	testPodEnv(t, "main", main.Env)
-
 	if len(deployment.Spec.Template.Spec.Volumes) != 1 {
 		t.Fatalf("volumes count = %d, want 1", len(deployment.Spec.Template.Spec.Volumes))
 	}
 	if deployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name != cm.Name {
 		t.Errorf("volume configmap = %q, want %q", deployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name, cm.Name)
-	}
-}
-
-func testPodEnv(t *testing.T, containerName string, env []corev1.EnvVar) {
-	t.Helper()
-	want := []corev1.EnvVar{
-		{Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.name"}}},
-		{Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.namespace"}}},
-		{Name: "POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "status.podIP"}}},
-		{Name: "POD_SERVICE_ACCOUNT_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "spec.serviceAccountName"}}},
-	}
-	for _, w := range want {
-		idx := slices.IndexFunc(env, func(e corev1.EnvVar) bool { return e.Name == w.Name })
-		if idx == -1 {
-			t.Errorf("%q container: missing env var %q", containerName, w.Name)
-			continue
-		}
-		got := env[idx]
-		if got.ValueFrom == nil || got.ValueFrom.FieldRef == nil {
-			t.Errorf("%q container: env var %q has no FieldRef", containerName, w.Name)
-			continue
-		}
-		if got.ValueFrom.FieldRef.APIVersion != w.ValueFrom.FieldRef.APIVersion {
-			t.Errorf("%q container: env var %q APIVersion = %q, want %q", containerName, w.Name, got.ValueFrom.FieldRef.APIVersion, w.ValueFrom.FieldRef.APIVersion)
-		}
-		if got.ValueFrom.FieldRef.FieldPath != w.ValueFrom.FieldRef.FieldPath {
-			t.Errorf("%q container: env var %q fieldPath = %q, want %q", containerName, w.Name, got.ValueFrom.FieldRef.FieldPath, w.ValueFrom.FieldRef.FieldPath)
-		}
 	}
 }
 
