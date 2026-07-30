@@ -14,27 +14,12 @@ func TestBuildFluxOptions(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		options   *config.FluxSpec
+		options   config.FluxSpec
 		checkFunc func(t *testing.T, got fluxinstall.Options)
 	}{
 		{
-			name:    "nil options returns defaults",
-			options: nil,
-			checkFunc: func(t *testing.T, got fluxinstall.Options) {
-				if got.Namespace != defaults.Namespace {
-					t.Errorf("namespace = %q, want %q", got.Namespace, defaults.Namespace)
-				}
-				if got.Registry != defaults.Registry {
-					t.Errorf("registry = %q, want %q", got.Registry, defaults.Registry)
-				}
-				if got.LogLevel != defaults.LogLevel {
-					t.Errorf("logLevel = %q, want %q", got.LogLevel, defaults.LogLevel)
-				}
-			},
-		},
-		{
 			name:    "empty options struct preserves defaults",
-			options: &config.FluxSpec{},
+			options: config.FluxSpec{},
 			checkFunc: func(t *testing.T, got fluxinstall.Options) {
 				if got.Namespace != defaults.Namespace {
 					t.Errorf("namespace = %q, want %q", got.Namespace, defaults.Namespace)
@@ -90,7 +75,7 @@ func TestPlatformFlux(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resources, err := PlatformFlux(nil)
+			resources, err := PlatformFlux(config.FluxSpec{})
 			if err != nil {
 				t.Fatalf("PlatformFlux error: %v", err)
 			}
@@ -109,7 +94,7 @@ func TestPlatformFlux(t *testing.T) {
 }
 
 func TestPlatformFlux_MutateFn_CopiesFields(t *testing.T) {
-	fluxResources, err := PlatformFlux(nil)
+	fluxResources, err := PlatformFlux(config.FluxSpec{})
 	if err != nil {
 		t.Fatalf("PlatformFlux error: %v", err)
 	}
@@ -136,7 +121,7 @@ func TestPlatformFlux_MutateFn_CopiesFields(t *testing.T) {
 }
 
 func TestPlatformFlux_MutateFn_NoOverwriteSkippedFields(t *testing.T) {
-	fluxResources, err := PlatformFlux(nil)
+	fluxResources, err := PlatformFlux(config.FluxSpec{})
 	if err != nil {
 		t.Fatalf("PlatformFlux error: %v", err)
 	}

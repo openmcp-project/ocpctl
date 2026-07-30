@@ -21,7 +21,7 @@ var skipFields = map[string]bool{
 	"status":     true,
 }
 
-func PlatformFlux(opts *config.FluxSpec) ([]*resources.Resource, error) {
+func PlatformFlux(opts config.FluxSpec) ([]*resources.Resource, error) {
 	options := buildFluxOptions(opts)
 	manifest, err := fluxinstall.Generate(options, "")
 	if err != nil {
@@ -82,12 +82,9 @@ func getReadyFn(obj *unstructured.Unstructured) resources.ReadyFn {
 	}
 }
 
-func buildFluxOptions(opts *config.FluxSpec) fluxinstall.Options {
+func buildFluxOptions(opts config.FluxSpec) fluxinstall.Options {
 	options := fluxinstall.MakeDefaultOptions()
 	options.ComponentsExtra = []string{}
-	if opts == nil {
-		return options
-	}
 	if opts.Version != "" {
 		options.Version = opts.Version
 	}
