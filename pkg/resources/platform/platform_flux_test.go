@@ -2,6 +2,7 @@ package platform
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	fluxinstall "github.com/fluxcd/flux2/v2/pkg/manifestgen/install"
@@ -23,6 +24,27 @@ func TestBuildFluxOptions(t *testing.T) {
 			checkFunc: func(t *testing.T, got fluxinstall.Options) {
 				if got.Namespace != defaults.Namespace {
 					t.Errorf("namespace = %q, want %q", got.Namespace, defaults.Namespace)
+				}
+				if got.Registry != defaults.Registry {
+					t.Errorf("registry = %q, want %q", got.Registry, defaults.Registry)
+				}
+				if got.LogLevel != defaults.LogLevel {
+					t.Errorf("logLevel = %q, want %q", got.LogLevel, defaults.LogLevel)
+				}
+			},
+		},
+		{
+			name:    "set fields override defaults",
+			options: config.FluxSpec{Version: "v1.0.0", ComponentsExtra: []string{"extra1", "extra2"}, NetworkPolicy: new(bool)},
+			checkFunc: func(t *testing.T, got fluxinstall.Options) {
+				if got.Version != "v1.0.0" {
+					t.Errorf("Version = %q, want %q", got.Version, "v1.0.0")
+				}
+				if !slices.Equal(got.ComponentsExtra, []string{"extra1", "extra2"}) {
+					t.Errorf("componentsExtra = %v, want %v", got.ComponentsExtra, []string{"extra1", "extra2"})
+				}
+				if got.NetworkPolicy != false {
+					t.Errorf("networkPolicy = %v, want %v", got.NetworkPolicy, false)
 				}
 				if got.Registry != defaults.Registry {
 					t.Errorf("registry = %q, want %q", got.Registry, defaults.Registry)
