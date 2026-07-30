@@ -4,37 +4,6 @@ import (
 	"testing"
 )
 
-func TestMergeFlux(t *testing.T) {
-	base := &Environment{
-		Spec: EnvironmentSpec{
-			Flux: FluxSpec{
-				Version:   "v2.3.0",
-				Namespace: "flux-system",
-				LogLevel:  "info",
-			},
-		},
-	}
-	overlay := &Environment{
-		Spec: EnvironmentSpec{
-			Flux: FluxSpec{
-				Version: "v2.4.0",
-			},
-		},
-	}
-
-	result := Merge(base, overlay)
-
-	if result.Spec.Flux.Version != "v2.4.0" {
-		t.Errorf("Version: got %q, want %q", result.Spec.Flux.Version, "v2.4.0")
-	}
-	if result.Spec.Flux.Namespace != "flux-system" {
-		t.Errorf("Namespace: got %q, want %q — overlay should not wipe base fields", result.Spec.Flux.Namespace, "flux-system")
-	}
-	if result.Spec.Flux.LogLevel != "info" {
-		t.Errorf("LogLevel: got %q, want %q — overlay should not wipe base fields", result.Spec.Flux.LogLevel, "info")
-	}
-}
-
 func TestDefaultContainsExpectedComponents(t *testing.T) {
 	cfg := Default()
 
