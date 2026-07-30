@@ -7,9 +7,9 @@ require (
 	github.com/openmcp-project/openmcp-operator/api v1.3.0
 	github.com/spf13/cobra v1.10.2
 	go.uber.org/zap v1.28.0
-	k8s.io/api v0.36.2
-	k8s.io/apimachinery v0.36.2
-	k8s.io/client-go v0.36.2
+	k8s.io/api v0.36.3
+	k8s.io/apimachinery v0.36.3
+	k8s.io/client-go v0.36.3
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3
 	sigs.k8s.io/controller-runtime v0.24.1
 	sigs.k8s.io/kind v0.32.0
