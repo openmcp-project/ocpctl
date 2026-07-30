@@ -158,18 +158,49 @@ func testPodEnv(t *testing.T, containerName string, env []corev1.EnvVar) {
 
 func TestOperatorDeployment_ReadyFn(t *testing.T) {
 	tests := []struct {
-		name          string
-		generation    int64
-		observedGen   int64
-		replicas      int32 // 0 means leave nil (ReadyFn defaults to 1)
-		readyReplicas int32
-		wantReady     bool
+		name               string
+		generation         int64
+		observedGeneration int64
+		replicas           int32
+		readyReplicas      int32
+		wantReady          bool
 	}{
-		{"ready with default replicas", 1, 1, 0, 1, true},
-		{"ready with explicit replicas", 1, 1, 2, 2, true},
-		{"not enough ready replicas", 1, 1, 0, 0, false},
-		{"partially ready", 1, 1, 3, 2, false},
-		{"generation mismatch", 2, 1, 0, 1, false},
+		{
+			name:               "ready with default replicas",
+			generation:         1,
+			observedGeneration: 1,
+			readyReplicas:      1,
+			wantReady:          true,
+		},
+		{
+			name:               "ready with explicit replicas",
+			generation:         1,
+			observedGeneration: 1,
+			replicas:           2,
+			readyReplicas:      2,
+			wantReady:          true,
+		},
+		{
+			name:               "not enough ready replicas",
+			generation:         1,
+			observedGeneration: 1,
+			wantReady:          false,
+		},
+		{
+			name:               "partially ready",
+			generation:         1,
+			observedGeneration: 1,
+			replicas:           3,
+			readyReplicas:      2,
+			wantReady:          false,
+		},
+		{
+			name:               "generation mismatch",
+			generation:         2,
+			observedGeneration: 1,
+			readyReplicas:      1,
+			wantReady:          false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -187,7 +218,7 @@ func TestOperatorDeployment_ReadyFn(t *testing.T) {
 			deployment := r.Object.(*appsv1.Deployment)
 
 			deployment.Generation = tt.generation
-			deployment.Status.ObservedGeneration = tt.observedGen
+			deployment.Status.ObservedGeneration = tt.observedGeneration
 			if tt.replicas > 0 {
 				deployment.Spec.Replicas = &tt.replicas
 			}
