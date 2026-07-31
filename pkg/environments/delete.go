@@ -8,16 +8,15 @@ import (
 	"github.com/openmcp-project/ocpctl/pkg/clusters"
 	"github.com/openmcp-project/ocpctl/pkg/logging"
 	clustersv1alpha1 "github.com/openmcp-project/openmcp-operator/api/clusters/v1alpha1"
-	"sigs.k8s.io/kind/pkg/cluster"
 )
 
 // Delete deletes all kind clusters that belong to the given environment.
 // It connects to the platform cluster, lists all Cluster resources, and collects
 // the kind cluster names from provider statuses set by cluster-provider-kind.
-func Delete(ctx context.Context, name string) error {
+func Delete(ctx context.Context, name string, cp ClusterProvider) error {
 	log := logging.FromContext(ctx)
 
-	c, err := clusters.PlatformClusterClient(name)
+	c, err := cp.PlatformClusterClient(name)
 	if err != nil {
 		return fmt.Errorf("connecting to platform cluster: %w", err)
 	}
@@ -46,10 +45,9 @@ func Delete(ctx context.Context, name string) error {
 	platformCluster := clusters.PlatformClusterName(name)
 	sortPlatformLast(kindClusters, platformCluster)
 
-	provider := cluster.NewProvider()
 	for _, kindCluster := range kindClusters {
 		log.Infof("Deleting kind cluster %q", kindCluster)
-		if err := provider.Delete(kindCluster, ""); err != nil {
+		if err := cp.DeleteCluster(kindCluster); err != nil {
 			return fmt.Errorf("deleting kind cluster %q: %w", kindCluster, err)
 		}
 	}

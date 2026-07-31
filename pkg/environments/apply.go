@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/openmcp-project/ocpctl/pkg/clusters"
 	"github.com/openmcp-project/ocpctl/pkg/config"
 	"github.com/openmcp-project/ocpctl/pkg/logging"
 	"github.com/openmcp-project/ocpctl/pkg/resources"
@@ -15,11 +14,11 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
-func Apply(ctx context.Context, name string, cfg *config.Environment) error {
+func Apply(ctx context.Context, name string, cfg *config.Environment, cp ClusterProvider) error {
 	log := logging.FromContext(ctx)
 
 	log.Infof("Ensuring platform cluster for environment %q", name)
-	created, err := clusters.EnsurePlatformCluster(name)
+	created, err := cp.EnsurePlatformCluster(name)
 	if err != nil {
 		return fmt.Errorf("ensuring platform cluster: %w", err)
 	}
@@ -29,7 +28,7 @@ func Apply(ctx context.Context, name string, cfg *config.Environment) error {
 		log.Info("Platform cluster already exists")
 	}
 
-	if err := applyPlatformResources(ctx, name, cfg); err != nil {
+	if err := applyPlatformResources(ctx, name, cfg, cp); err != nil {
 		return err
 	}
 
@@ -37,70 +36,14 @@ func Apply(ctx context.Context, name string, cfg *config.Environment) error {
 	return nil
 }
 
-func applyPlatformResources(ctx context.Context, environment string, cfg *config.Environment) error {
+func applyPlatformResources(ctx context.Context, environment string, cfg *config.Environment, cp ClusterProvider) error {
 	log := logging.FromContext(ctx)
 
-	clusterProviderImage := ""
-	for _, cp := range cfg.Spec.ClusterProviders {
-		if cp.Name == "kind" {
-			clusterProviderImage = cp.Image
-			break
-		}
-	}
-	if clusterProviderImage == "" {
-		return fmt.Errorf("no cluster provider for kind configured")
-	}
-	if cfg.Spec.Namespace == "" {
-		return fmt.Errorf("namespace must not be empty")
-	}
-
 	log.Info("Building platform cluster client")
-	c, err := clusters.PlatformClusterClient(environment)
+	manager, err := buildPlatformResources(environment, cfg, cp)
 	if err != nil {
-		return fmt.Errorf("building platform cluster client: %w", err)
+		return err
 	}
-
-	nsResource := platform.OperatorNamespace(cfg.Spec.Namespace)
-	ns := nsResource.Object.(*corev1.Namespace)
-	saResource := platform.OperatorServiceAccount(ns)
-	sa := saResource.Object.(*corev1.ServiceAccount)
-	crbResource := platform.OperatorClusterRoleBinding(sa)
-	crb := crbResource.Object.(*rbacv1.ClusterRoleBinding)
-	cmResource := platform.OperatorConfigMap(environment, ns)
-	cm := cmResource.Object.(*corev1.ConfigMap)
-	deploymentResource := platform.OperatorDeployment(cfg.Spec.Operator.Image, environment, ns, sa, crb, cm)
-	deployment := deploymentResource.Object.(*appsv1.Deployment)
-
-	platformCluster := &resources.Cluster{Client: c}
-	platformCluster.AddResources(
-		nsResource,
-		saResource,
-		crbResource,
-		cmResource,
-		deploymentResource,
-		platform.PlatformCluster(environment, ns, deployment),
-		platform.ClusterProvider(clusterProviderImage, deployment),
-	)
-
-	fluxResources, err := platform.PlatformFlux(cfg.Spec.Flux)
-	if err != nil {
-		return fmt.Errorf("generating flux resources: %w", err)
-	}
-	platformCluster.AddResources(fluxResources...)
-
-	for _, sp := range cfg.Spec.ServiceProviders {
-		platformCluster.AddResources(platform.ServiceProvider(sp.Name, sp.Image, deployment))
-	}
-	for _, ps := range cfg.Spec.PlatformServices {
-		psResource := platform.PlatformService(ps.Name, ps.Image, deployment)
-		platformCluster.AddResources(psResource)
-		if ps.Name == "gateway" {
-			platformCluster.AddResources(platform.GatewayServiceConfig(ps.Name))
-		}
-	}
-
-	manager := &resources.Manager{}
-	manager.AddClusters(platformCluster)
 
 	log.Info("Applying platform resources")
 	for {
@@ -127,4 +70,68 @@ func applyPlatformResources(ctx context.Context, environment string, cfg *config
 		case <-time.After(5 * time.Second):
 		}
 	}
+}
+
+func buildPlatformResources(environment string, cfg *config.Environment, cp ClusterProvider) (*resources.Manager, error) {
+	clusterProviderImage := ""
+	for _, cpSpec := range cfg.Spec.ClusterProviders {
+		if cpSpec.Name == "kind" {
+			clusterProviderImage = cpSpec.Image
+			break
+		}
+	}
+	if clusterProviderImage == "" {
+		return nil, fmt.Errorf("no cluster provider for kind configured")
+	}
+	if cfg.Spec.Namespace == "" {
+		return nil, fmt.Errorf("namespace must not be empty")
+	}
+
+	c, err := cp.PlatformClusterClient(environment)
+	if err != nil {
+		return nil, fmt.Errorf("building platform cluster client: %w", err)
+	}
+
+	nsResource := platform.OperatorNamespace(cfg.Spec.Namespace)
+	ns := nsResource.Object.(*corev1.Namespace)
+	saResource := platform.OperatorServiceAccount(ns)
+	sa := saResource.Object.(*corev1.ServiceAccount)
+	crbResource := platform.OperatorClusterRoleBinding(sa)
+	crb := crbResource.Object.(*rbacv1.ClusterRoleBinding)
+	cmResource := platform.OperatorConfigMap(environment, ns)
+	cm := cmResource.Object.(*corev1.ConfigMap)
+	deploymentResource := platform.OperatorDeployment(cfg.Spec.Operator.Image, environment, ns, sa, crb, cm)
+	deployment := deploymentResource.Object.(*appsv1.Deployment)
+
+	platformCluster := &resources.Cluster{Client: c}
+	platformCluster.AddResources(
+		nsResource,
+		saResource,
+		crbResource,
+		cmResource,
+		deploymentResource,
+		platform.PlatformCluster(environment, ns, deployment),
+		platform.ClusterProvider(clusterProviderImage, deployment),
+	)
+
+	fluxResources, err := platform.PlatformFlux(cfg.Spec.Flux)
+	if err != nil {
+		return nil, fmt.Errorf("generating flux resources: %w", err)
+	}
+	platformCluster.AddResources(fluxResources...)
+
+	for _, sp := range cfg.Spec.ServiceProviders {
+		platformCluster.AddResources(platform.ServiceProvider(sp.Name, sp.Image, deployment))
+	}
+	for _, ps := range cfg.Spec.PlatformServices {
+		psResource := platform.PlatformService(ps.Name, ps.Image, deployment)
+		platformCluster.AddResources(psResource)
+		if ps.Name == "gateway" {
+			platformCluster.AddResources(platform.GatewayServiceConfig(ps.Name))
+		}
+	}
+
+	manager := &resources.Manager{}
+	manager.AddClusters(platformCluster)
+	return manager, nil
 }
