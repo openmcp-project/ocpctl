@@ -56,7 +56,7 @@ func TestBuildPlatformResources(t *testing.T) {
 			wantErr: "building platform cluster client",
 		},
 		{
-			name: "base (cluster provider and operator) only",
+			name: "base only (cluster provider, operator, flux)",
 			cfg: config.Environment{
 				Spec: config.EnvironmentSpec{
 					Namespace:        "test-ns",
