@@ -42,6 +42,7 @@ func Merge(base, overlay *Environment) *Environment {
 	if overlay.Spec.Operator.Image != "" {
 		result.Spec.Operator.Image = overlay.Spec.Operator.Image
 	}
+	result.Spec.Flux = mergeFlux(base.Spec.Flux, overlay.Spec.Flux)
 	result.Spec.ClusterProviders = mergeComponents(base.Spec.ClusterProviders, overlay.Spec.ClusterProviders)
 	result.Spec.ServiceProviders = mergeComponents(base.Spec.ServiceProviders, overlay.Spec.ServiceProviders)
 	result.Spec.PlatformServices = mergeComponents(base.Spec.PlatformServices, overlay.Spec.PlatformServices)
@@ -72,6 +73,44 @@ func mergeComponents(base, overlay []ComponentSpec) []ComponentSpec {
 	return result
 }
 
+func mergeFlux(base, overlay FluxSpec) FluxSpec {
+	result := base
+	if overlay.Version != "" {
+		result.Version = overlay.Version
+	}
+	if overlay.Namespace != "" {
+		result.Namespace = overlay.Namespace
+	}
+	if overlay.Registry != "" {
+		result.Registry = overlay.Registry
+	}
+	if overlay.RegistryCredential != "" {
+		result.RegistryCredential = overlay.RegistryCredential
+	}
+	if overlay.ImagePullSecret != "" {
+		result.ImagePullSecret = overlay.ImagePullSecret
+	}
+	if overlay.BaseURL != "" {
+		result.BaseURL = overlay.BaseURL
+	}
+	if overlay.LogLevel != "" {
+		result.LogLevel = overlay.LogLevel
+	}
+	if overlay.ComponentsExtra != nil {
+		result.ComponentsExtra = overlay.ComponentsExtra
+	}
+	if overlay.ClusterDomain != "" {
+		result.ClusterDomain = overlay.ClusterDomain
+	}
+	if overlay.NetworkPolicy != nil {
+		result.NetworkPolicy = overlay.NetworkPolicy
+	}
+	if overlay.TolerationKeys != nil {
+		result.TolerationKeys = overlay.TolerationKeys
+	}
+	return result
+}
+
 type Environment struct {
 	APIVersion string          `json:"apiVersion"`
 	Kind       string          `json:"kind"`
@@ -84,6 +123,7 @@ type EnvironmentSpec struct {
 	ClusterProviders []ComponentSpec `json:"clusterProviders"`
 	ServiceProviders []ComponentSpec `json:"serviceProviders"`
 	PlatformServices []ComponentSpec `json:"platformServices"`
+	Flux             FluxSpec        `json:"flux"`
 }
 
 type OperatorSpec struct {
@@ -93,4 +133,18 @@ type OperatorSpec struct {
 type ComponentSpec struct {
 	Name  string `json:"name"`
 	Image string `json:"image"`
+}
+
+type FluxSpec struct {
+	Version            string   `json:"version"`
+	Namespace          string   `json:"namespace"`
+	Registry           string   `json:"registry"`
+	RegistryCredential string   `json:"registryCredential"`
+	ImagePullSecret    string   `json:"imagePullSecret"`
+	BaseURL            string   `json:"baseURL"`
+	LogLevel           string   `json:"logLevel"`
+	ComponentsExtra    []string `json:"componentsExtra"`
+	ClusterDomain      string   `json:"clusterDomain"`
+	NetworkPolicy      *bool    `json:"networkPolicy"`
+	TolerationKeys     []string `json:"tolerationKeys"`
 }

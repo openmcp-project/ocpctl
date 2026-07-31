@@ -82,9 +82,28 @@ spec:
   platformServices:
     - name: example
       image: ghcr.io/openmcp-project/images/platform-service-example:v0.0.10
+  flux:
+    namespace: "my-flux-namespace"
 ```
 
 Only fields present in the config file override the defaults — omitted fields keep their default values.
+
+### Flux Configuration
+The following fields are provided to configure the deployed flux instance
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `version` | `string` | `latest` | Flux version to install |
+| `namespace` | `string` | `flux-system` | Namespace into which Flux is installed |
+| `registry` | `string` | `ghcr.io/fluxcd` | OCI registry from which Flux images are pulled |
+| `registryCredential` | `string` | `""` | Credentials for the registry (`user:password`) |
+| `imagePullSecret` | `string` | `""` | Name of an existing image pull secret in the Flux namespace |
+| `baseURL` | `string` | `https://github.com/fluxcd/flux2/releases` | Base URL used to download Flux manifests |
+| `logLevel` | `string` | `info` | Log level for all Flux controllers (`debug`, `info`, `error`) |
+| `componentsExtra` | `[]string` | `[]` | Additional Flux controllers to install on top of the core set (default installs none) |
+| `clusterDomain` | `string` | `cluster.local` | Kubernetes cluster domain used for internal DNS |
+| `networkPolicy` | `bool` | `true` | Whether to install Flux's default NetworkPolicy resources |
+| `tolerationKeys` | `[]string` | `[]` | Toleration keys added to all Flux controller deployments |
 
 ## Multiple environments
 
