@@ -116,7 +116,7 @@ func buildPlatformResources(environment string, cfg *config.Environment, cp Clus
 
 	fluxResources, err := platform.PlatformFlux(cfg.Spec.Flux)
 	if err != nil {
-		return fmt.Errorf("generating flux resources: %w", err)
+		return nil, fmt.Errorf("generating flux resources: %w", err)
 	}
 	platformCluster.AddResources(fluxResources...)
 
