@@ -8,7 +8,7 @@
         "/^pkg/config/environment-defaults\\.yaml$/"
       ],
       "matchStrings": [
-        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?<newline>\\s+)image: [^:]+:(?<currentValue>\\S+)"
+        "# renovate: datasource=(?<datasource>\\S+) registryUrl=(?<registryUrl>\\S+) depName=(?<depName>\\S+)(?<newline>\\s+)image: [^:]+:(?<currentValue>\\S+)"
       ],
       "autoReplaceStringTemplate": "# renovate: datasource={{datasource}} depName={{depName}}{{newline}}image: {{{depName}}}:{{newValue}}{{#if newDigest}}@{{newDigest}}{{/if}}"
     }
