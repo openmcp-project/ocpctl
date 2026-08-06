@@ -1,6 +1,15 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:best-practices"],
+  "packageRules": [
+    {
+      "description": "Group all updates for environment-defaults.yaml",
+      "matchFileNames": ["/^pkg/config/environment-defaults\\.yaml$/"],
+      "groupName": "environment-defaults updates",
+      "groupSlug": "environment-defaults-updates",
+      "separateMajorMinor": false
+    }
+  ],
   "customManagers": [
     {
       "customType": "regex",
