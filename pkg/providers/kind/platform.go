@@ -78,30 +78,3 @@ const PlatformClusterSuffix = "-platform"
 func PlatformClusterName(environment string) string {
 	return environment + PlatformClusterSuffix
 }
-
-// ProviderKind implements the environments.ClusterProvider interface
-type ProviderKind struct{}
-
-func (p *ProviderKind) EnsurePlatformCluster(name string) (bool, error) {
-	return EnsurePlatformCluster(name)
-}
-
-func (p *ProviderKind) PlatformClusterClient(name string) (client.Client, error) {
-	return PlatformClusterClient(name)
-}
-
-func (p *ProviderKind) ListClusters() ([]string, error) {
-	return cluster.NewProvider().List()
-}
-
-func (p *ProviderKind) DeleteCluster(name string) error {
-	return cluster.NewProvider().Delete(name, "")
-}
-
-func (p *ProviderKind) GetKubeconfig(name string, internal bool) (string, error) {
-	return cluster.NewProvider().KubeConfig(name, internal)
-}
-
-func (p *ProviderKind) ExportKubeconfig(name string, explicitPath string, internal bool) error {
-	return cluster.NewProvider().ExportKubeConfig(name, explicitPath, internal)
-}
