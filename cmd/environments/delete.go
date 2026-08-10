@@ -12,7 +12,7 @@ func newDeleteCmd() *cobra.Command {
 		Short: "Delete an environment",
 		Args:  validatedNameArg,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return envpkg.Delete(cmd.Context(), args[0], &kind.ProviderKind{})
+			return envpkg.Delete(cmd.Context(), args[0], kind.NewProviderKind())
 		},
 	}
 }

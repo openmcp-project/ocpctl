@@ -33,7 +33,7 @@ func newKubeconfigExportCmd() *cobra.Command {
 		Short: "Export kubeconfig to a file",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			err := clusterspkg.Export(ctx, environment, name, kubeconfig, internal, &kind.ProviderKind{})
+			err := clusterspkg.Export(ctx, environment, name, kubeconfig, internal, kind.NewProviderKind())
 			if err != nil {
 				return err
 			}
@@ -67,7 +67,7 @@ func newKubeconfigGetCmd() *cobra.Command {
 		Short: "Print kubeconfig to stdout",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			config, err := clusterspkg.Get(ctx, environment, name, internal, &kind.ProviderKind{})
+			config, err := clusterspkg.Get(ctx, environment, name, internal, kind.NewProviderKind())
 			if err != nil {
 				return err
 			}

@@ -16,7 +16,7 @@ func newListCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			environments, err := envpkg.List(ctx, &kind.ProviderKind{})
+			environments, err := envpkg.List(ctx, kind.NewProviderKind())
 			if err != nil {
 				return err
 			}

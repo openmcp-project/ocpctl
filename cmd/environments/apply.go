@@ -29,7 +29,7 @@ func newApplyCmd() *cobra.Command {
 				cfg = config.Merge(cfg, userCfg)
 			}
 
-			return envpkg.Apply(ctx, name, cfg, &kind.ProviderKind{})
+			return envpkg.Apply(ctx, name, cfg, kind.NewProviderKind())
 		},
 	}
 

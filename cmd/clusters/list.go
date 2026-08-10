@@ -18,7 +18,7 @@ func newListCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			clusters, err := clusterspkg.List(ctx, &kind.ProviderKind{})
+			clusters, err := clusterspkg.List(ctx, kind.NewProviderKind())
 			if err != nil {
 				return err
 			}
