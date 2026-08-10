@@ -1,6 +1,9 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:best-practices"],
+  "extends": [
+    "github>openmcp-project/.github:renovate-config",
+    "config:best-practices"
+  ],
   "packageRules": [
     {
       "description": "Group all updates for environment-defaults.yaml",
