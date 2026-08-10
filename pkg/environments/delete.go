@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/openmcp-project/cluster-provider-kind/api/v1alpha1"
 	"github.com/openmcp-project/ocpctl/pkg/providers/kind"
 	"github.com/openmcp-project/ocpctl/pkg/logging"
 	clustersv1alpha1 "github.com/openmcp-project/openmcp-operator/api/clusters/v1alpha1"
@@ -28,18 +27,12 @@ func Delete(ctx context.Context, name string, cp ClusterProvider) error {
 
 	var kindClusters []string
 	for _, cl := range clusterList.Items {
-		if cl.Status.ProviderStatus == nil {
+		name, err := kind.KindClusterName(cl)
+		if err != nil {
+			log.Warnf("Skipping cluster %q: %v", cl.Name, err)
 			continue
 		}
-		var ps v1alpha1.ClusterStatus
-		if err := cl.Status.GetProviderStatus(&ps); err != nil {
-			log.Warnf("Skipping cluster %q: failed to parse provider status: %v", cl.Name, err)
-			continue
-		}
-		if ps.Kind != "ClusterStatus" || ps.APIVersion != v1alpha1.SchemeGroupVersion.String() {
-			continue
-		}
-		kindClusters = append(kindClusters, ps.KindClusterName)
+		kindClusters = append(kindClusters, name)
 	}
 
 	platformCluster := kind.PlatformClusterName(name)
