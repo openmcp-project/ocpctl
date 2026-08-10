@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/openmcp-project/cluster-provider-kind/api/v1alpha1"
 	"github.com/openmcp-project/ocpctl/pkg/logging"
+	"github.com/openmcp-project/ocpctl/pkg/providers/kind"
 	clustersv1alpha1 "github.com/openmcp-project/openmcp-operator/api/clusters/v1alpha1"
 )
 
@@ -30,7 +30,7 @@ func Export(ctx context.Context, environment, clusterName, explicitPath string, 
 func exportKubeconfig(clusters []clustersv1alpha1.Cluster, clusterName string, explicitPath string, internal bool, cp ClusterProvider) error {
 	for _, c := range clusters {
 		if c.Name == clusterName {
-			name, err := getKindClusterName(c)
+			name, err := kind.KindClusterName(c)
 			if err != nil {
 				return err
 			}
@@ -65,7 +65,7 @@ func Get(ctx context.Context, environment, clusterName string, internal bool, cp
 func getKubeconfig(clusters []clustersv1alpha1.Cluster, clusterName string, internal bool, cp ClusterProvider) (string, error) {
 	for _, c := range clusters {
 		if c.Name == clusterName {
-			name, err := getKindClusterName(c)
+			name, err := kind.KindClusterName(c)
 			if err != nil {
 				return "", err
 			}
@@ -77,22 +77,4 @@ func getKubeconfig(clusters []clustersv1alpha1.Cluster, clusterName string, inte
 		}
 	}
 	return "", fmt.Errorf("cluster %s not found", clusterName)
-}
-
-func getKindClusterName(cluster clustersv1alpha1.Cluster) (string, error) {
-	if cluster.Status.ProviderStatus == nil {
-		return "", fmt.Errorf("cluster ProviderStatus is nil")
-	}
-	var ps v1alpha1.ClusterStatus
-	if err := cluster.Status.GetProviderStatus(&ps); err != nil {
-		return "", fmt.Errorf("failed to parse provider status: %w", err)
-	}
-	if ps.Kind != "ClusterStatus" || ps.APIVersion != v1alpha1.SchemeGroupVersion.String() {
-		return "", fmt.Errorf("unexpected provider status type %s/%s", ps.APIVersion, ps.Kind)
-
-	}
-	if ps.KindClusterName == "" {
-		return "", fmt.Errorf("cluster has empty KindClusterName in provider status")
-	}
-	return ps.KindClusterName, nil
 }
