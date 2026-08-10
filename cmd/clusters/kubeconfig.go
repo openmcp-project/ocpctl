@@ -47,7 +47,7 @@ func newKubeconfigExportCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&internal, "internal", "i", false, "internal kubeconfig")
 	_ = cmd.MarkFlagRequired("environment")
 	_ = cmd.MarkFlagRequired("name")
-	_ = cmd.RegisterFlagCompletionFunc("path", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	_ = cmd.RegisterFlagCompletionFunc("kubeconfig", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return nil, cobra.ShellCompDirectiveDefault
 	})
 	_ = cmd.RegisterFlagCompletionFunc("internal", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -71,7 +71,7 @@ func newKubeconfigGetCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Println(config)
+			fmt.Print(config)
 			return nil
 		},
 	}
