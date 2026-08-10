@@ -10,6 +10,7 @@ func NewClustersCmd() *cobra.Command {
 
 	cmd.AddCommand(
 		newListCmd(),
+		newKubeconfigCmd(),
 	)
 
 	return cmd
