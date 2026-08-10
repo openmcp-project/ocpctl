@@ -11,7 +11,7 @@ import (
 
 func Export(ctx context.Context, environment, clusterName, explicitPath string, internal bool, cp ClusterProvider) error {
 	log := logging.FromContext(ctx)
-	log.Infof("retrieving clusters of environment: %s", environment)
+	log.Debugf("retrieving clusters of environment: %s", environment)
 	clusters, managed, err := getClusters(ctx, environment, cp)
 	if err != nil {
 		return fmt.Errorf("could not fetch clusters of environment %s: %w", environment, err)
@@ -19,7 +19,7 @@ func Export(ctx context.Context, environment, clusterName, explicitPath string, 
 	if !managed {
 		return fmt.Errorf("environment %s is not managed by ocpctl", environment)
 	}
-	log.Infof("exporting kubeconfig for cluster %s/%s", environment, clusterName)
+	log.Debugf("exporting kubeconfig for cluster %s/%s", environment, clusterName)
 	err = exportKubeconfig(clusters, clusterName, explicitPath, internal, cp)
 	if err != nil {
 		return fmt.Errorf("could not export kubeconfig for cluster %s/%s: %w", environment, clusterName, err)
@@ -46,7 +46,7 @@ func exportKubeconfig(clusters []clustersv1alpha1.Cluster, clusterName string, e
 
 func Get(ctx context.Context, environment, clusterName string, internal bool, cp ClusterProvider) (string, error) {
 	log := logging.FromContext(ctx)
-	log.Infof("retrieving clusters of environment: %s", environment)
+	log.Debugf("retrieving clusters of environment: %s", environment)
 	clusters, managed, err := getClusters(ctx, environment, cp)
 	if err != nil {
 		return "", fmt.Errorf("could not fetch clusters of environment %s: %w", environment, err)
@@ -54,7 +54,7 @@ func Get(ctx context.Context, environment, clusterName string, internal bool, cp
 	if !managed {
 		return "", fmt.Errorf("environment %q is not managed by ocpctl", environment)
 	}
-	log.Infof("retrieving kubeconfig of: %s/%s", environment, clusterName)
+	log.Debugf("retrieving kubeconfig of: %s/%s", environment, clusterName)
 	config, err := getKubeconfig(clusters, clusterName, internal, cp)
 	if err != nil {
 		return "", fmt.Errorf("could not retrieve kubeconfig for %s/%s: %w", environment, clusterName, err)
