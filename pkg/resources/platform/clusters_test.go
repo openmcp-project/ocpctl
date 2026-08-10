@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/openmcp-project/ocpctl/pkg/clusters"
+	"github.com/openmcp-project/ocpctl/pkg/providers/kind"
 	clustersv1alpha1 "github.com/openmcp-project/openmcp-operator/api/clusters/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -49,7 +49,7 @@ func TestPlatformCluster_MutateFn(t *testing.T) {
 		t.Errorf("purposes = %v, want %v", cluster.Spec.Purposes, []string{clustersv1alpha1.PURPOSE_PLATFORM})
 	}
 
-	expectedAnnotation := clusters.PlatformClusterName("test-env")
+	expectedAnnotation := kind.PlatformClusterName("test-env")
 	gotAnnotation := cluster.Annotations["kind.clusters.openmcp.cloud/name"]
 	if gotAnnotation != expectedAnnotation {
 		t.Errorf("kind cluster name annotation = %q, want %q", gotAnnotation, expectedAnnotation)

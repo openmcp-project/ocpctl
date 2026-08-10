@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/openmcp-project/cluster-provider-kind/api/v1alpha1"
-	"github.com/openmcp-project/ocpctl/pkg/clusters"
+	"github.com/openmcp-project/ocpctl/pkg/providers/kind"
 	"github.com/openmcp-project/ocpctl/pkg/logging"
 	clustersv1alpha1 "github.com/openmcp-project/openmcp-operator/api/clusters/v1alpha1"
 )
@@ -42,7 +42,7 @@ func Delete(ctx context.Context, name string, cp ClusterProvider) error {
 		kindClusters = append(kindClusters, ps.KindClusterName)
 	}
 
-	platformCluster := clusters.PlatformClusterName(name)
+	platformCluster := kind.PlatformClusterName(name)
 	sortPlatformLast(kindClusters, platformCluster)
 
 	for _, kindCluster := range kindClusters {

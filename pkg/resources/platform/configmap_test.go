@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/openmcp-project/ocpctl/pkg/clusters"
+	"github.com/openmcp-project/ocpctl/pkg/providers/kind"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -45,7 +45,7 @@ func TestOperatorConfigMap_MutateFn(t *testing.T) {
 	if !strings.Contains(config, "scheduler") {
 		t.Error("config missing 'scheduler' section")
 	}
-	onboardingName := clusters.OnboardingClusterName("test-env")
+	onboardingName := kind.OnboardingClusterName("test-env")
 	if !strings.Contains(config, onboardingName) {
 		t.Errorf("config does not contain onboarding cluster name %q", onboardingName)
 	}

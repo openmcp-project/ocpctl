@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/openmcp-project/ocpctl/pkg/clusters"
+	providers "github.com/openmcp-project/ocpctl/pkg/providers/kind"
 	"github.com/openmcp-project/ocpctl/pkg/resources"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ scheduler:
         spec:
           profile: kind
           tenancy: Shared
-`, clusters.OnboardingClusterName(environment)))
+`, providers.OnboardingClusterName(environment)))
 }
 
 // OperatorConfigMap returns a Resource for the openmcp-operator ConfigMap

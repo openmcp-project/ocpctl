@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/openmcp-project/ocpctl/pkg/clusters"
 	"github.com/openmcp-project/ocpctl/pkg/logging"
+	"github.com/openmcp-project/ocpctl/pkg/providers/kind"
 	clustersv1alpha1 "github.com/openmcp-project/openmcp-operator/api/clusters/v1alpha1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 )
@@ -23,10 +23,10 @@ func List(ctx context.Context, cp ClusterProvider) ([]string, error) {
 
 	var environments []string
 	for _, c := range kindClusters {
-		if !strings.HasSuffix(c, clusters.PlatformClusterSuffix) {
+		if !strings.HasSuffix(c, kind.PlatformClusterSuffix) {
 			continue
 		}
-		env := strings.TrimSuffix(c, clusters.PlatformClusterSuffix)
+		env := strings.TrimSuffix(c, kind.PlatformClusterSuffix)
 
 		managed, err := isOcpctlManaged(ctx, env, cp)
 		if err != nil {

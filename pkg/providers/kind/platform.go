@@ -1,4 +1,4 @@
-package clusters
+package kind
 
 import (
 	"fmt"
@@ -96,4 +96,12 @@ func (p *ProviderKind) ListClusters() ([]string, error) {
 
 func (p *ProviderKind) DeleteCluster(name string) error {
 	return cluster.NewProvider().Delete(name, "")
+}
+
+func (p *ProviderKind) GetKubeconfig(name string, internal bool) (string, error) {
+	return cluster.NewProvider().KubeConfig(name, internal)
+}
+
+func (p *ProviderKind) ExportKubeconfig(name string, explicitPath string, internal bool) error {
+	return cluster.NewProvider().ExportKubeConfig(name, explicitPath, internal)
 }
