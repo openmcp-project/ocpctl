@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	testutils "github.com/openmcp-project/ocpctl/pkg/testutils"
+	"github.com/openmcp-project/ocpctl/pkg/testutils"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 

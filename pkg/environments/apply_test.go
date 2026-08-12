@@ -8,7 +8,7 @@ import (
 
 	"github.com/openmcp-project/ocpctl/pkg/config"
 	"github.com/openmcp-project/ocpctl/pkg/logging"
-	testutils "github.com/openmcp-project/ocpctl/pkg/testutils"
+	"github.com/openmcp-project/ocpctl/pkg/testutils"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
