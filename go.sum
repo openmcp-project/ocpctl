@@ -25,8 +25,14 @@ github.com/evanphx/json-patch/v5 v5.9.11 h1:/8HVnzMq13/3x9TPvjG08wUGqBTmZBsCWzjT
 github.com/evanphx/json-patch/v5 v5.9.11/go.mod h1:3j+LviiESTElxA4p3EMKAB9HXj3/XEtnUf6OZxqIQTM=
 github.com/fluxcd/flux2/v2 v2.9.2 h1:tts1QHzJTdBBdXyId0l+qFSVKDhqjTxEuPN/6lgKOSk=
 github.com/fluxcd/flux2/v2 v2.9.2/go.mod h1:ZETeVAsJB3RJav8yX8kK/yWvhXITFNK+aIoAab/KMCQ=
+github.com/fluxcd/flux2/v2 v2.9.3 h1:vog4HYpH5aOeVLGk4G2EpFSm+K0EVhzeIMXFNTsn/A8=
+github.com/fluxcd/flux2/v2 v2.9.3/go.mod h1:RDvLv3P4oMvhgUERp89JlSgTrVXjMFzrHapzIuG9Y3Y=
+github.com/fluxcd/flux2/v2 v2.9.4 h1:/o9IdC9YZVFEsnuJawjEn5tpU8gpnxGftsG85Ubw+bI=
+github.com/fluxcd/flux2/v2 v2.9.4/go.mod h1:M0KHKxqnnSEmiOccMWfDfFc4lRs9za7XYZK1O4PNDx8=
 github.com/fluxcd/pkg/kustomize v1.35.3 h1:ufvU0W5oNS1KyIE7VHlxt80YkIMOeP/gTDoWsa8ublU=
 github.com/fluxcd/pkg/kustomize v1.35.3/go.mod h1:LKjh2x9MjoJ8Ry0WTgB84WWgF999VwA4jWDix2x+QmE=
+github.com/fluxcd/pkg/kustomize v1.35.4 h1:CL/EPJyzTIFqQxE6t8ukGZifp/ZyveobztyRAaMYCn4=
+github.com/fluxcd/pkg/kustomize v1.35.4/go.mod h1:LKjh2x9MjoJ8Ry0WTgB84WWgF999VwA4jWDix2x+QmE=
 github.com/fluxcd/pkg/tar v1.2.0 h1:T6WFB5M0YRHktlrgdKNskqpdp76TVDdWTOeuWz33CFs=
 github.com/fluxcd/pkg/tar v1.2.0/go.mod h1:Wlalp5vIVe+BbckkKkqExKcoHAeeWJPAzwK7ONeFcS0=
 github.com/fsnotify/fsnotify v1.10.1 h1:b0/UzAf9yR5rhf3RPm9gf3ehBPpf0oZKIjtpKrx59Ho=
