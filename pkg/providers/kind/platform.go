@@ -15,9 +15,8 @@ import (
 
 // EnsurePlatformCluster creates the kind cluster for the platform components if
 // it does not already exist. Returns true if the cluster was newly created.
-func EnsurePlatformCluster(environment string) (bool, error) {
+func EnsurePlatformCluster(environment string, provider *cluster.Provider) (bool, error) {
 	name := PlatformClusterName(environment)
-	provider := cluster.NewProvider()
 
 	existing, err := provider.List()
 	if err != nil {
@@ -45,9 +44,8 @@ func EnsurePlatformCluster(environment string) (bool, error) {
 }
 
 // PlatformClusterClient returns a controller-runtime client for the platform cluster of the given environment.
-func PlatformClusterClient(environment string) (client.Client, error) {
+func PlatformClusterClient(environment string, provider *cluster.Provider) (client.Client, error) {
 	name := PlatformClusterName(environment)
-	provider := cluster.NewProvider()
 
 	kubeconfig, err := provider.KubeConfig(name, false)
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 
 	"github.com/openmcp-project/ocpctl/pkg/config"
 	"github.com/openmcp-project/ocpctl/pkg/logging"
+	"github.com/openmcp-project/ocpctl/pkg/providers"
 	"github.com/openmcp-project/ocpctl/pkg/resources"
 	"github.com/openmcp-project/ocpctl/pkg/resources/platform"
 	appsv1 "k8s.io/api/apps/v1"
@@ -14,7 +15,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
-func Apply(ctx context.Context, name string, cfg *config.Environment, cp ClusterProvider) error {
+func Apply(ctx context.Context, name string, cfg *config.Environment, cp providers.ClusterProvider) error {
 	log := logging.FromContext(ctx)
 
 	log.Infof("Ensuring platform cluster for environment %q", name)
@@ -36,7 +37,7 @@ func Apply(ctx context.Context, name string, cfg *config.Environment, cp Cluster
 	return nil
 }
 
-func applyPlatformResources(ctx context.Context, environment string, cfg *config.Environment, cp ClusterProvider) error {
+func applyPlatformResources(ctx context.Context, environment string, cfg *config.Environment, cp providers.ClusterProvider) error {
 	log := logging.FromContext(ctx)
 
 	log.Info("Building platform cluster client")
@@ -72,7 +73,7 @@ func applyPlatformResources(ctx context.Context, environment string, cfg *config
 	}
 }
 
-func buildPlatformResources(environment string, cfg *config.Environment, cp ClusterProvider) (*resources.Manager, error) {
+func buildPlatformResources(environment string, cfg *config.Environment, cp providers.ClusterProvider) (*resources.Manager, error) {
 	clusterProviderImage := ""
 	for _, cpSpec := range cfg.Spec.ClusterProviders {
 		if cpSpec.Name == "kind" {

@@ -4,7 +4,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// FakeProvider implements both environments.ClusterProvider and clusters.ClusterProvider.
+// FakeProvider implements providers.ClusterProvider.
 type FakeProvider struct {
 	EnsureCreated    bool
 	EnsureErr        error

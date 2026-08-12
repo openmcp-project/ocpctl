@@ -5,11 +5,12 @@ import (
 	"fmt"
 
 	"github.com/openmcp-project/ocpctl/pkg/logging"
+	"github.com/openmcp-project/ocpctl/pkg/providers"
 	"github.com/openmcp-project/ocpctl/pkg/providers/kind"
 	clustersv1alpha1 "github.com/openmcp-project/openmcp-operator/api/clusters/v1alpha1"
 )
 
-func Export(ctx context.Context, environment, clusterName, explicitPath string, internal bool, cp ClusterProvider) error {
+func Export(ctx context.Context, environment, clusterName, explicitPath string, internal bool, cp providers.ClusterProvider) error {
 	log := logging.FromContext(ctx)
 	log.Debugf("retrieving clusters of environment %q", environment)
 	clusters, managed, err := getClusters(ctx, environment, cp)
@@ -27,24 +28,15 @@ func Export(ctx context.Context, environment, clusterName, explicitPath string, 
 	return nil
 }
 
-func exportKubeconfig(clusters []clustersv1alpha1.Cluster, clusterName string, explicitPath string, internal bool, cp ClusterProvider) error {
-	for _, c := range clusters {
-		if c.Name == clusterName {
-			name, err := kind.KindClusterName(c)
-			if err != nil {
-				return err
-			}
-			err = cp.ExportKubeconfig(name, explicitPath, internal)
-			if err != nil {
-				return err
-			}
-			return nil
-		}
+func exportKubeconfig(clusters []clustersv1alpha1.Cluster, clusterName string, explicitPath string, internal bool, cp providers.ClusterProvider) error {
+	name, err := resolveKindName(clusters, clusterName)
+	if err != nil {
+		return err
 	}
-	return fmt.Errorf("cluster not found")
+	return cp.ExportKubeconfig(name, explicitPath, internal)
 }
 
-func Get(ctx context.Context, environment, clusterName string, internal bool, cp ClusterProvider) (string, error) {
+func Get(ctx context.Context, environment, clusterName string, internal bool, cp providers.ClusterProvider) (string, error) {
 	log := logging.FromContext(ctx)
 	log.Debugf("retrieving clusters of environment %q", environment)
 	clusters, managed, err := getClusters(ctx, environment, cp)
@@ -62,18 +54,18 @@ func Get(ctx context.Context, environment, clusterName string, internal bool, cp
 	return config, nil
 }
 
-func getKubeconfig(clusters []clustersv1alpha1.Cluster, clusterName string, internal bool, cp ClusterProvider) (string, error) {
+func getKubeconfig(clusters []clustersv1alpha1.Cluster, clusterName string, internal bool, cp providers.ClusterProvider) (string, error) {
+	name, err := resolveKindName(clusters, clusterName)
+	if err != nil {
+		return "", err
+	}
+	return cp.GetKubeconfig(name, internal)
+}
+
+func resolveKindName(clusters []clustersv1alpha1.Cluster, clusterName string) (string, error) {
 	for _, c := range clusters {
 		if c.Name == clusterName {
-			name, err := kind.KindClusterName(c)
-			if err != nil {
-				return "", err
-			}
-			config, err := cp.GetKubeconfig(name, internal)
-			if err != nil {
-				return "", err
-			}
-			return config, nil
+			return kind.KindClusterName(c)
 		}
 	}
 	return "", fmt.Errorf("cluster not found")

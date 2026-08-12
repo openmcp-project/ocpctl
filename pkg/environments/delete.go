@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/openmcp-project/ocpctl/pkg/providers"
 	"github.com/openmcp-project/ocpctl/pkg/providers/kind"
 	"github.com/openmcp-project/ocpctl/pkg/logging"
 	clustersv1alpha1 "github.com/openmcp-project/openmcp-operator/api/clusters/v1alpha1"
@@ -12,7 +13,7 @@ import (
 // Delete deletes all kind clusters that belong to the given environment.
 // It connects to the platform cluster, lists all Cluster resources, and collects
 // the kind cluster names from provider statuses set by cluster-provider-kind.
-func Delete(ctx context.Context, name string, cp ClusterProvider) error {
+func Delete(ctx context.Context, name string, cp providers.ClusterProvider) error {
 	log := logging.FromContext(ctx)
 
 	c, err := cp.PlatformClusterClient(name)

@@ -3,9 +3,13 @@ package kind
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/kind/pkg/cluster"
+
+	"github.com/openmcp-project/ocpctl/pkg/providers"
 )
 
-// providerKind implements the environments.ClusterProvider interface
+var _ providers.ClusterProvider = &providerKind{}
+
+// providerKind implements providers.ClusterProvider
 type providerKind struct {
 	provider *cluster.Provider
 }
@@ -15,11 +19,11 @@ func NewProviderKind() *providerKind {
 }
 
 func (p *providerKind) EnsurePlatformCluster(name string) (bool, error) {
-	return EnsurePlatformCluster(name)
+	return EnsurePlatformCluster(name, p.provider)
 }
 
 func (p *providerKind) PlatformClusterClient(name string) (client.Client, error) {
-	return PlatformClusterClient(name)
+	return PlatformClusterClient(name, p.provider)
 }
 
 func (p *providerKind) ListClusters() ([]string, error) {

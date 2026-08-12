@@ -8,11 +8,12 @@ import (
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 
 	"github.com/openmcp-project/ocpctl/pkg/logging"
+	"github.com/openmcp-project/ocpctl/pkg/providers"
 	"github.com/openmcp-project/ocpctl/pkg/providers/kind"
 	clustersv1alpha1 "github.com/openmcp-project/openmcp-operator/api/clusters/v1alpha1"
 )
 
-func List(ctx context.Context, cp ClusterProvider) (map[string][]clustersv1alpha1.Cluster, error) {
+func List(ctx context.Context, cp providers.ClusterProvider) (map[string][]clustersv1alpha1.Cluster, error) {
 	log := logging.FromContext(ctx)
 	log.Debug("retrieving kind clusters")
 	kindClusters, err := cp.ListClusters()
@@ -32,7 +33,7 @@ func List(ctx context.Context, cp ClusterProvider) (map[string][]clustersv1alpha
 			continue
 		}
 		if !managed {
-			log.Debug("cluster %q not managed by ocpctl", c)
+			log.Debugf("cluster %q not managed by ocpctl", c)
 			continue
 		}
 		environments[env] = envClusters
@@ -41,7 +42,7 @@ func List(ctx context.Context, cp ClusterProvider) (map[string][]clustersv1alpha
 	return environments, nil
 }
 
-func getClusters(ctx context.Context, environment string, cp ClusterProvider) ([]clustersv1alpha1.Cluster, bool, error) {
+func getClusters(ctx context.Context, environment string, cp providers.ClusterProvider) ([]clustersv1alpha1.Cluster, bool, error) {
 	c, err := cp.PlatformClusterClient(environment)
 	if err != nil {
 		return nil, false, err
