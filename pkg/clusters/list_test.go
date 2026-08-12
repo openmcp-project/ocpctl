@@ -1,4 +1,4 @@
-package environments
+package clusters
 
 import (
 	"fmt"
@@ -6,19 +6,8 @@ import (
 	"testing"
 
 	testutils "github.com/openmcp-project/ocpctl/pkg/testutils"
-	clustersv1alpha1 "github.com/openmcp-project/openmcp-operator/api/clusters/v1alpha1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
-
-func listClient(t *testing.T) *fake.ClientBuilder {
-	t.Helper()
-	s := runtime.NewScheme()
-	if err := clustersv1alpha1.AddToScheme(s); err != nil {
-		t.Fatal(err)
-	}
-	return fake.NewClientBuilder().WithScheme(s)
-}
 
 func TestList(t *testing.T) {
 	tests := []struct {
@@ -33,7 +22,7 @@ func TestList(t *testing.T) {
 			wantErr: "listing kind clusters",
 		},
 		{
-			name: "no kind clusters returns empty list",
+			name: "no kind clusters returns empty map",
 			fp:   testutils.FakeProvider{ListResult: []string{}},
 		},
 		{
@@ -41,40 +30,51 @@ func TestList(t *testing.T) {
 			fp:   testutils.FakeProvider{ListResult: []string{"some-other-cluster"}},
 		},
 		{
-			name: "client error for platform cluster is skipped with warning",
+			name: "client error is skipped with warning",
 			fp: testutils.FakeProvider{
 				ListResult: []string{"testenv-platform"},
 				ClientErr:  fmt.Errorf("client error"),
 			},
 		},
 		{
-			name: "platform cluster without cr is skipped",
+			name: "cluster without CRD installed is not managed",
 			fp: testutils.FakeProvider{
 				ListResult: []string{"testenv-platform"},
 				Client:     &testutils.NoMatchClient{Client: fake.NewClientBuilder().Build()},
 			},
 		},
 		{
-			name: "platform cluster with CRD installed is returned",
+			name: "managed environment is returned",
 			fp: testutils.FakeProvider{
 				ListResult: []string{"testenv-platform"},
-				Client:     listClient(t).Build(),
+				Client:     testutils.SchemeClient(t),
 			},
 			wantEnvs: []string{"testenv"},
 		},
 		{
-			name: "only platform clusters pass suffix filter",
+			name: "clusters in environment are returned",
 			fp: testutils.FakeProvider{
-				ListResult: []string{"testenv-platform", "other-cluster", "testenv2-platform"},
-				Client:     listClient(t).Build(),
+				ListResult: []string{"testenv-platform"},
+				Client: testutils.SchemeClient(t,
+					testutils.ClusterWithKindName(t, "platform", "testenv-platform"),
+					testutils.ClusterWithKindName(t, "onboarding", "testenv-onboarding"),
+				),
 			},
-			wantEnvs: []string{"testenv", "testenv2"},
+			wantEnvs: []string{"testenv"},
+		},
+		{
+			name: "multiple environments are returned sorted",
+			fp: testutils.FakeProvider{
+				ListResult: []string{"b-platform", "a-platform"},
+				Client:     testutils.SchemeClient(t),
+			},
+			wantEnvs: []string{"a", "b"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			envs, err := List(testutils.Ctx(t), &tt.fp)
+			result, err := List(testutils.Ctx(t), &tt.fp)
 
 			if tt.wantErr != "" {
 				if err == nil {
@@ -88,12 +88,20 @@ func TestList(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if len(envs) != len(tt.wantEnvs) {
-				t.Fatalf("envs = %v, want %v", envs, tt.wantEnvs)
+			if len(result) != len(tt.wantEnvs) {
+				got := make([]string, 0, len(result))
+				for k := range result {
+					got = append(got, k)
+				}
+				t.Fatalf("got environments %v, want %v", got, tt.wantEnvs)
 			}
-			for i := range envs {
-				if envs[i] != tt.wantEnvs[i] {
-					t.Errorf("envs[%d] = %q, want %q", i, envs[i], tt.wantEnvs[i])
+			for _, env := range tt.wantEnvs {
+				if _, ok := result[env]; !ok {
+					got := make([]string, 0, len(result))
+					for k := range result {
+						got = append(got, k)
+					}
+					t.Errorf("expected environment %q in result, got %v", env, got)
 				}
 			}
 		})
