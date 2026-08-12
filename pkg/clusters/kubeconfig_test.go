@@ -46,6 +46,15 @@ func TestGet(t *testing.T) {
 			wantErr:     "not found",
 		},
 		{
+			name: "empty kind cluster name",
+			fp: testutils.FakeProvider{
+				Client: testutils.SchemeClient(t, &clustersv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: "platform"}}),
+			},
+			environment: "env",
+			cluster:     "platform",
+			wantErr:     "has no provider status",
+		},
+		{
 			name: "kubeconfig error",
 			fp: testutils.FakeProvider{
 				Client:        testutils.SchemeClient(t, testutils.ClusterWithKindName(t, "platform", "env-platform")),
@@ -98,7 +107,7 @@ func TestExport(t *testing.T) {
 		cluster     string
 		path        string
 		wantErr     string
-		wantExport  map[string]string
+		wantPath    string
 	}{
 		{
 			name:        "client error",
@@ -126,6 +135,15 @@ func TestExport(t *testing.T) {
 			wantErr:     "not found",
 		},
 		{
+			name: "empty kind cluster name",
+			fp: testutils.FakeProvider{
+				Client: testutils.SchemeClient(t, &clustersv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: "platform"}}),
+			},
+			environment: "env",
+			cluster:     "platform",
+			wantErr:     "has no provider status",
+		},
+		{
 			name: "export error",
 			fp: testutils.FakeProvider{
 				Client:    testutils.SchemeClient(t, testutils.ClusterWithKindName(t, "platform", "env-platform")),
@@ -142,8 +160,8 @@ func TestExport(t *testing.T) {
 			},
 			environment: "env",
 			cluster:     "platform",
-			path:        "/tmp/kubeconfig",
-			wantExport:  map[string]string{"env-platform": "/tmp/kubeconfig"},
+			path:     "/tmp/kubeconfig",
+			wantPath: "/tmp/kubeconfig",
 		},
 	}
 
@@ -163,22 +181,9 @@ func TestExport(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			for _, path := range tt.wantExport {
-				if tt.fp.ExportedTo != path {
-					t.Errorf("ExportedTo = %q, want %q", tt.fp.ExportedTo, path)
-				}
+			if tt.wantPath != "" && tt.fp.ExportedTo != tt.wantPath {
+				t.Errorf("ExportedTo = %q, want %q", tt.fp.ExportedTo, tt.wantPath)
 			}
 		})
-	}
-}
-
-func TestGetHandlesEmptyKindName(t *testing.T) {
-	cl := &clustersv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: "platform"}}
-	fp := testutils.FakeProvider{
-		Client: testutils.SchemeClient(t, cl),
-	}
-	_, err := Get(testutils.Ctx(t), "env", "platform", false, &fp)
-	if err == nil {
-		t.Fatal("expected error for cluster with no provider status, got nil")
 	}
 }

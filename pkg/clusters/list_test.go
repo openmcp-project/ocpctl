@@ -11,10 +11,11 @@ import (
 
 func TestList(t *testing.T) {
 	tests := []struct {
-		name     string
-		fp       testutils.FakeProvider
-		wantEnvs []string
-		wantErr  string
+		name         string
+		fp           testutils.FakeProvider
+		wantEnvs     []string
+		wantClusters map[string][]string
+		wantErr      string
 	}{
 		{
 			name:    "list clusters error",
@@ -60,10 +61,11 @@ func TestList(t *testing.T) {
 					testutils.ClusterWithKindName(t, "onboarding", "testenv-onboarding"),
 				),
 			},
-			wantEnvs: []string{"testenv"},
+			wantEnvs:     []string{"testenv"},
+			wantClusters: map[string][]string{"testenv": {"platform", "onboarding"}},
 		},
 		{
-			name: "multiple environments are returned sorted",
+			name: "multiple environments are returned",
 			fp: testutils.FakeProvider{
 				ListResult: []string{"b-platform", "a-platform"},
 				Client:     testutils.SchemeClient(t),
@@ -102,6 +104,22 @@ func TestList(t *testing.T) {
 						got = append(got, k)
 					}
 					t.Errorf("expected environment %q in result, got %v", env, got)
+				}
+			}
+			for env, wantClusters := range tt.wantClusters {
+				gotClusters := result[env]
+				if len(gotClusters) != len(wantClusters) {
+					t.Errorf("env %q: got %d clusters, want %d", env, len(gotClusters), len(wantClusters))
+					continue
+				}
+				gotNames := make(map[string]bool, len(gotClusters))
+				for _, c := range gotClusters {
+					gotNames[c.Name] = true
+				}
+				for _, name := range wantClusters {
+					if !gotNames[name] {
+						t.Errorf("env %q: expected cluster %q in result", env, name)
+					}
 				}
 			}
 		})
