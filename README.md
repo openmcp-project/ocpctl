@@ -16,7 +16,11 @@ go install github.com/openmcp-project/ocpctl@latest
 
 ## Usage
 
-```
+ocpctl is organized into command groups, each managing a different aspect of your OpenControlPlane setup. The sections below describe the available commands and how to use them.
+
+## Environments
+
+```bash
 ocpctl env apply <name> [--config <file>]
 ocpctl env delete <name>
 ocpctl env list
@@ -88,7 +92,8 @@ spec:
 
 Only fields present in the config file override the defaults — omitted fields keep their default values.
 
-### Flux Configuration
+#### Flux Configuration
+
 The following fields are provided to configure the deployed flux instance
 
 | Field | Type | Default | Description |
@@ -108,6 +113,41 @@ The following fields are provided to configure the deployed flux instance
 ## Multiple environments
 
 Each environment gets its own set of kind clusters prefixed with the environment name (e.g. `my-env-platform`), so multiple environments can coexist on the same machine.
+
+## Clusters
+```
+ocpctl clusters list
+ocpctl clusters kubeconfig get --environment <env> --name <clustername> [--internal]
+ocpctl clusters kubeconfig export --environment <env> --name <clustername> [--kubeconfig <path-to-kubeconfig> --internal]
+```
+
+### List clusters
+
+Lists all clusters across all managed environments:
+
+```bash
+ocpctl clusters list
+```
+
+### Get kubeconfig
+
+Prints the kubeconfig for a specific cluster to stdout:
+
+```bash
+ocpctl clusters kubeconfig get --environment my-env --name my-cluster
+```
+
+Use `--internal` to get the kubeconfig with the address on the docker network.
+
+### Export kubeconfig
+
+Merges the kubeconfig for a cluster into a local kubeconfig file. The target file is resolved in order: `--kubeconfig` flag, then `$KUBECONFIG`, then `~/.kube/config`:
+
+```bash
+ocpctl clusters kubeconfig export --environment my-env --name my-cluster
+```
+
+Use `--kubeconfig` to target a different file and `--internal` to export the kubeconfig with the address on the docker network.
 
 ## Support, Feedback, Contributing
 

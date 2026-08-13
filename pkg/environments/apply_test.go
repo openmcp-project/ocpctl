@@ -8,6 +8,7 @@ import (
 
 	"github.com/openmcp-project/ocpctl/pkg/config"
 	"github.com/openmcp-project/ocpctl/pkg/logging"
+	"github.com/openmcp-project/ocpctl/pkg/testutils"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -20,7 +21,7 @@ func TestBuildPlatformResources(t *testing.T) {
 	tests := []struct {
 		name          string
 		cfg           config.Environment
-		fp            fakeProvider
+		fp            testutils.FakeProvider
 		wantErr       string
 		wantResources int
 	}{
@@ -52,7 +53,7 @@ func TestBuildPlatformResources(t *testing.T) {
 					Operator:         config.OperatorSpec{Image: operatorImage},
 				},
 			},
-			fp:      fakeProvider{clientErr: fmt.Errorf("client error")},
+			fp:      testutils.FakeProvider{ClientErr: fmt.Errorf("client error")},
 			wantErr: "building platform cluster client",
 		},
 		{
@@ -123,31 +124,31 @@ func TestBuildPlatformResources(t *testing.T) {
 func TestApply(t *testing.T) {
 	tests := []struct {
 		name             string
-		fp               fakeProvider
+		fp               testutils.FakeProvider
 		wantErr          string
 		wantEnsureCalled bool
 	}{
 		{
 			name:    "ensure platform cluster error",
-			fp:      fakeProvider{ensureErr: fmt.Errorf("platform error")},
+			fp:      testutils.FakeProvider{EnsureErr: fmt.Errorf("platform error")},
 			wantErr: "ensuring platform cluster",
 		},
 		{
 			name:             "cluster already exists proceeds to apply",
-			fp:               fakeProvider{ensureCreated: false},
+			fp:               testutils.FakeProvider{EnsureCreated: false},
 			wantEnsureCalled: true,
 		},
 		{
 			name:             "cluster newly created proceeds to apply",
-			fp:               fakeProvider{ensureCreated: true},
+			fp:               testutils.FakeProvider{EnsureCreated: true},
 			wantEnsureCalled: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.fp.client == nil && tt.fp.clientErr == nil {
-				tt.fp.client = fake.NewClientBuilder().Build()
+			if tt.fp.Client == nil && tt.fp.ClientErr == nil {
+				tt.fp.Client = fake.NewClientBuilder().Build()
 			}
 
 			log, err := logging.NewLogger(false)
@@ -169,8 +170,8 @@ func TestApply(t *testing.T) {
 			err = Apply(ctx, "test", &envConfig, &tt.fp)
 
 			if tt.wantEnsureCalled {
-				if tt.fp.ensureCalledWith != "test" {
-					t.Errorf("EnsurePlatformCluster called with %q, want %q", tt.fp.ensureCalledWith, "test")
+				if tt.fp.EnsureCalledWith != "test" {
+					t.Errorf("EnsurePlatformCluster called with %q, want %q", tt.fp.EnsureCalledWith, "test")
 				}
 				if err != context.Canceled {
 					t.Errorf("Apply returned %v, want context.Canceled", err)

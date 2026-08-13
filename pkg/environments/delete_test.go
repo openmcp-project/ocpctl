@@ -1,47 +1,28 @@
 package environments
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"testing"
 
-	kindv1alpha1 "github.com/openmcp-project/cluster-provider-kind/api/v1alpha1"
-	"github.com/openmcp-project/ocpctl/pkg/logging"
+	"github.com/openmcp-project/ocpctl/pkg/testutils"
 	clustersv1alpha1 "github.com/openmcp-project/openmcp-operator/api/clusters/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func clusterWithStatus(t *testing.T, name, kindClusterName string) *clustersv1alpha1.Cluster {
-	t.Helper()
-	cl := &clustersv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: name}}
-	ps := kindv1alpha1.ClusterStatus{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ClusterStatus",
-			APIVersion: kindv1alpha1.SchemeGroupVersion.String(),
-		},
-		KindClusterName: kindClusterName,
-	}
-	if err := cl.Status.SetProviderStatus(ps); err != nil {
-		t.Fatal(err)
-	}
-	return cl
-}
-
 func TestDelete(t *testing.T) {
 	tests := []struct {
 		name        string
-		fp          fakeProvider
+		fp          testutils.FakeProvider
 		clusters    []client.Object
 		wantErr     string
 		wantDeleted []string
 	}{
 		{
 			name:    "client error",
-			fp:      fakeProvider{clientErr: fmt.Errorf("client error")},
+			fp:      testutils.FakeProvider{ClientErr: fmt.Errorf("client error")},
 			wantErr: "connecting to platform cluster",
 		},
 		{
@@ -51,38 +32,38 @@ func TestDelete(t *testing.T) {
 		{
 			name: "nil provider status is skipped",
 			clusters: []client.Object{
-				&clustersv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: "no-status-cluster"}},
+				&clustersv1alpha1.Cluster{},
 			},
 			wantDeleted: nil,
 		},
 		{
 			name: "single kind cluster is deleted",
 			clusters: []client.Object{
-				clusterWithStatus(t, "onboarding", "onboarding"),
+				testutils.ClusterWithKindName(t, "onboarding", "onboarding"),
 			},
 			wantDeleted: []string{"onboarding"},
 		},
 		{
 			name: "platform cluster is deleted last",
 			clusters: []client.Object{
-				clusterWithStatus(t, "platform", "platform"),
-				clusterWithStatus(t, "onboarding", "onboarding"),
+				testutils.ClusterWithKindName(t, "platform", "platform"),
+				testutils.ClusterWithKindName(t, "onboarding", "onboarding"),
 			},
 			wantDeleted: []string{"onboarding", "platform"},
 		},
 		{
 			name: "delete error is returned",
 			clusters: []client.Object{
-				clusterWithStatus(t, "onboarding", "onboarding"),
+				testutils.ClusterWithKindName(t, "onboarding", "onboarding"),
 			},
-			fp:      fakeProvider{deleteErr: fmt.Errorf("delete error")},
+			fp:      testutils.FakeProvider{DeleteErr: fmt.Errorf("delete error")},
 			wantErr: "deleting kind cluster",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.fp.client == nil && tt.fp.clientErr == nil {
+			if tt.fp.Client == nil && tt.fp.ClientErr == nil {
 				s := runtime.NewScheme()
 				if err := clustersv1alpha1.AddToScheme(s); err != nil {
 					t.Fatal(err)
@@ -91,15 +72,10 @@ func TestDelete(t *testing.T) {
 				if len(tt.clusters) > 0 {
 					builder = builder.WithStatusSubresource(tt.clusters...).WithObjects(tt.clusters...)
 				}
-				tt.fp.client = builder.Build()
+				tt.fp.Client = builder.Build()
 			}
 
-			log, err := logging.NewLogger(false)
-			if err != nil {
-				t.Fatal(err)
-			}
-			ctx := logging.IntoContext(context.Background(), log)
-			err = Delete(ctx, "env", &tt.fp)
+			err := Delete(testutils.Ctx(t), "env", &tt.fp)
 
 			if tt.wantErr != "" {
 				if err == nil {
@@ -113,12 +89,12 @@ func TestDelete(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if len(tt.fp.deletedClusters) != len(tt.wantDeleted) {
-				t.Fatalf("deleted %v, want %v", tt.fp.deletedClusters, tt.wantDeleted)
+			if len(tt.fp.DeletedClusters) != len(tt.wantDeleted) {
+				t.Fatalf("deleted %v, want %v", tt.fp.DeletedClusters, tt.wantDeleted)
 			}
-			for i := range tt.fp.deletedClusters {
-				if tt.fp.deletedClusters[i] != tt.wantDeleted[i] {
-					t.Errorf("deleted = %q, want %q", tt.fp.deletedClusters[i], tt.wantDeleted[i])
+			for i := range tt.fp.DeletedClusters {
+				if tt.fp.DeletedClusters[i] != tt.wantDeleted[i] {
+					t.Errorf("deleted = %q, want %q", tt.fp.DeletedClusters[i], tt.wantDeleted[i])
 				}
 			}
 		})

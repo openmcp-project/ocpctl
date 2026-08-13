@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/openmcp-project/ocpctl/pkg/clusters"
 	"github.com/openmcp-project/ocpctl/pkg/logging"
+	"github.com/openmcp-project/ocpctl/pkg/providers"
+	"github.com/openmcp-project/ocpctl/pkg/providers/kind"
 	clustersv1alpha1 "github.com/openmcp-project/openmcp-operator/api/clusters/v1alpha1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 )
 
 // List returns the names of all ocpctl-managed local environments.
 // It lists kind clusters with the "-platform" suffix and verifies each has the Cluster CRD installed.
-func List(ctx context.Context, cp ClusterProvider) ([]string, error) {
+func List(ctx context.Context, cp providers.ClusterProvider) ([]string, error) {
 	log := logging.FromContext(ctx)
 
 	kindClusters, err := cp.ListClusters()
@@ -23,10 +24,10 @@ func List(ctx context.Context, cp ClusterProvider) ([]string, error) {
 
 	var environments []string
 	for _, c := range kindClusters {
-		if !strings.HasSuffix(c, clusters.PlatformClusterSuffix) {
+		if !strings.HasSuffix(c, kind.PlatformClusterSuffix) {
 			continue
 		}
-		env := strings.TrimSuffix(c, clusters.PlatformClusterSuffix)
+		env := strings.TrimSuffix(c, kind.PlatformClusterSuffix)
 
 		managed, err := isOcpctlManaged(ctx, env, cp)
 		if err != nil {
@@ -41,7 +42,7 @@ func List(ctx context.Context, cp ClusterProvider) ([]string, error) {
 	return environments, nil
 }
 
-func isOcpctlManaged(ctx context.Context, environment string, cp ClusterProvider) (bool, error) {
+func isOcpctlManaged(ctx context.Context, environment string, cp providers.ClusterProvider) (bool, error) {
 	c, err := cp.PlatformClusterClient(environment)
 	if err != nil {
 		return false, err

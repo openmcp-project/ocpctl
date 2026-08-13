@@ -1,85 +1,72 @@
 package environments
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"testing"
 
-	"github.com/openmcp-project/ocpctl/pkg/logging"
+	"github.com/openmcp-project/ocpctl/pkg/testutils"
 	clustersv1alpha1 "github.com/openmcp-project/openmcp-operator/api/clusters/v1alpha1"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-// noMatchClient wraps a fake client and returns a NoKindMatchError for List calls.
-type noMatchClient struct {
-	client.Client
-}
-
-func (n *noMatchClient) List(_ context.Context, _ client.ObjectList, _ ...client.ListOption) error {
-	return &apimeta.NoKindMatchError{GroupKind: schema.GroupKind{Group: "clusters.openmcp.cloud", Kind: "ClusterList"}}
-}
-
-func listClient(t *testing.T) client.Client {
+func listClient(t *testing.T) *fake.ClientBuilder {
 	t.Helper()
 	s := runtime.NewScheme()
 	if err := clustersv1alpha1.AddToScheme(s); err != nil {
 		t.Fatal(err)
 	}
-	return fake.NewClientBuilder().WithScheme(s).Build()
+	return fake.NewClientBuilder().WithScheme(s)
 }
 
 func TestList(t *testing.T) {
 	tests := []struct {
 		name     string
-		fp       fakeProvider
+		fp       testutils.FakeProvider
 		wantEnvs []string
 		wantErr  string
 	}{
 		{
 			name:    "list clusters error",
-			fp:      fakeProvider{listErr: fmt.Errorf("list error")},
+			fp:      testutils.FakeProvider{ListErr: fmt.Errorf("list error")},
 			wantErr: "listing kind clusters",
 		},
 		{
 			name: "no kind clusters returns empty list",
-			fp:   fakeProvider{listClusters: []string{}},
+			fp:   testutils.FakeProvider{ListResult: []string{}},
 		},
 		{
 			name: "non-platform cluster is ignored",
-			fp:   fakeProvider{listClusters: []string{"some-other-cluster"}},
+			fp:   testutils.FakeProvider{ListResult: []string{"some-other-cluster"}},
 		},
 		{
 			name: "client error for platform cluster is skipped with warning",
-			fp: fakeProvider{
-				listClusters: []string{"testenv-platform"},
-				clientErr:    fmt.Errorf("client error"),
+			fp: testutils.FakeProvider{
+				ListResult: []string{"testenv-platform"},
+				ClientErr:  fmt.Errorf("client error"),
 			},
 		},
 		{
 			name: "platform cluster without cr is skipped",
-			fp: fakeProvider{
-				listClusters: []string{"testenv-platform"},
-				client:       &noMatchClient{fake.NewClientBuilder().Build()},
+			fp: testutils.FakeProvider{
+				ListResult: []string{"testenv-platform"},
+				Client:     &testutils.NoMatchClient{Client: fake.NewClientBuilder().Build()},
 			},
 		},
 		{
 			name: "platform cluster with CRD installed is returned",
-			fp: fakeProvider{
-				listClusters: []string{"testenv-platform"},
-				client:       listClient(t),
+			fp: testutils.FakeProvider{
+				ListResult: []string{"testenv-platform"},
+				Client:     listClient(t).Build(),
 			},
 			wantEnvs: []string{"testenv"},
 		},
 		{
 			name: "only platform clusters pass suffix filter",
-			fp: fakeProvider{
-				listClusters: []string{"testenv-platform", "other-cluster", "testenv2-platform"},
-				client:       listClient(t),
+			fp: testutils.FakeProvider{
+				ListResult: []string{"testenv-platform", "other-cluster", "testenv2-platform"},
+				Client:     listClient(t).Build(),
 			},
 			wantEnvs: []string{"testenv", "testenv2"},
 		},
@@ -87,12 +74,7 @@ func TestList(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			log, err := logging.NewLogger(false)
-			if err != nil {
-				t.Fatal(err)
-			}
-			ctx := logging.IntoContext(context.Background(), log)
-			envs, err := List(ctx, &tt.fp)
+			envs, err := List(testutils.Ctx(t), &tt.fp)
 
 			if tt.wantErr != "" {
 				if err == nil {

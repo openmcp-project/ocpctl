@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/openmcp-project/ocpctl/cmd/clusters"
 	"github.com/openmcp-project/ocpctl/cmd/environments"
 	cmdversion "github.com/openmcp-project/ocpctl/cmd/version"
 	"github.com/openmcp-project/ocpctl/internal/version"
@@ -59,6 +60,7 @@ func init() {
 		return nil
 	}
 	rootCmd.AddCommand(environments.NewEnvironmentsCmd())
+	rootCmd.AddCommand(clusters.NewClustersCmd())
 	rootCmd.AddCommand(cmdversion.NewVersionCmd())
 	rootCmd.Version = version.Version()
 	rootCmd.SetVersionTemplate(fmt.Sprintf("%s\n", version.Version()))

@@ -3,7 +3,7 @@ package environments
 import (
 	"fmt"
 
-	"github.com/openmcp-project/ocpctl/pkg/clusters"
+	"github.com/openmcp-project/ocpctl/pkg/providers/kind"
 	"github.com/openmcp-project/ocpctl/pkg/config"
 	envpkg "github.com/openmcp-project/ocpctl/pkg/environments"
 	"github.com/spf13/cobra"
@@ -29,7 +29,7 @@ func newApplyCmd() *cobra.Command {
 				cfg = config.Merge(cfg, userCfg)
 			}
 
-			return envpkg.Apply(ctx, name, cfg, &clusters.ProviderKind{})
+			return envpkg.Apply(ctx, name, cfg, kind.NewProviderKind())
 		},
 	}
 

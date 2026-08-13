@@ -1,4 +1,4 @@
-package clusters
+package kind
 
 const onboardingClusterSuffix = "-onboarding"
 
