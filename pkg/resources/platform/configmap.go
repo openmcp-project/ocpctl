@@ -21,11 +21,15 @@ scheduler:
   purposeMappings:
     mcp:
       template:
+        metadata:
+          namespace: openmcp-system
         spec:
           profile: kind
           tenancy: Exclusive
     platform:
       template:
+        metadata:
+          namespace: openmcp-system
         spec:
           profile: kind
           tenancy: Shared
@@ -34,11 +38,14 @@ scheduler:
         metadata:
           annotations:
             kind.clusters.openmcp.cloud/name: %s
+          namespace: openmcp-system
         spec:
           profile: kind
           tenancy: Shared
     workload:
       template:
+        metadata:
+          namespace: openmcp-system
         spec:
           profile: kind
           tenancy: Shared
