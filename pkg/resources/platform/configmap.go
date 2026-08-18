@@ -12,6 +12,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// Namespaces used by the scheduler purposeMappings for cluster placement.
+const (
+	ControlPlanesNamespace = "controlplanes"
+	WorkloadsNamespace     = "workloads"
+)
+
 func getOperatorConfig(environment string) string {
 	return strings.TrimSpace(fmt.Sprintf(`
 managedControlPlane:
@@ -22,7 +28,7 @@ scheduler:
     mcp:
       template:
         metadata:
-          namespace: controlplanes
+          namespace: %[2]s
         spec:
           profile: kind
           tenancy: Exclusive
@@ -37,7 +43,7 @@ scheduler:
       template:
         metadata:
           annotations:
-            kind.clusters.openmcp.cloud/name: %s
+            kind.clusters.openmcp.cloud/name: %[1]s
           namespace: openmcp-system
         spec:
           profile: kind
@@ -45,11 +51,11 @@ scheduler:
     workload:
       template:
         metadata:
-          namespace: workloads
+          namespace: %[3]s
         spec:
           profile: kind
           tenancy: Shared
-`, providers.OnboardingClusterName(environment)))
+`, providers.OnboardingClusterName(environment), ControlPlanesNamespace, WorkloadsNamespace))
 }
 
 // OperatorConfigMap returns a Resource for the openmcp-operator ConfigMap

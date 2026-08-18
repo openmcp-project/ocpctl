@@ -65,7 +65,7 @@ func TestBuildPlatformResources(t *testing.T) {
 					Operator:         config.OperatorSpec{Image: operatorImage},
 				},
 			},
-			wantResources: 39,
+			wantResources: 41,
 		},
 		{
 			name: "base with service provider",
@@ -79,7 +79,7 @@ func TestBuildPlatformResources(t *testing.T) {
 					},
 				},
 			},
-			wantResources: 40,
+			wantResources: 42,
 		},
 		{
 			name: "base with platform service",
@@ -93,7 +93,7 @@ func TestBuildPlatformResources(t *testing.T) {
 					},
 				},
 			},
-			wantResources: 41,
+			wantResources: 43,
 		},
 	}
 
