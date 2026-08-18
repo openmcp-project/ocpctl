@@ -22,7 +22,7 @@ scheduler:
     mcp:
       template:
         metadata:
-          namespace: openmcp-system
+          namespace: controlplanes
         spec:
           profile: kind
           tenancy: Exclusive
@@ -45,7 +45,7 @@ scheduler:
     workload:
       template:
         metadata:
-          namespace: openmcp-system
+          namespace: workloads
         spec:
           profile: kind
           tenancy: Shared
