@@ -95,6 +95,9 @@ func buildPlatformResources(environment string, cfg *config.Environment, cp prov
 
 	nsResource := platform.OperatorNamespace(cfg.Spec.Namespace)
 	ns := nsResource.Object.(*corev1.Namespace)
+	// Namespaces referenced by the scheduler purposeMappings for cluster placement.
+	cpNsResource := platform.OperatorNamespace(platform.ControlPlanesNamespace)
+	wlNsResource := platform.OperatorNamespace(platform.WorkloadsNamespace)
 	saResource := platform.OperatorServiceAccount(ns)
 	sa := saResource.Object.(*corev1.ServiceAccount)
 	crbResource := platform.OperatorClusterRoleBinding(sa)
@@ -107,6 +110,8 @@ func buildPlatformResources(environment string, cfg *config.Environment, cp prov
 	platformCluster := &resources.Cluster{Client: c}
 	platformCluster.AddResources(
 		nsResource,
+		cpNsResource,
+		wlNsResource,
 		saResource,
 		crbResource,
 		cmResource,
