@@ -1,6 +1,6 @@
 module github.com/openmcp-project/ocpctl
 
-go 1.26.5
+go 1.26.6
 
 require (
 	github.com/fluxcd/flux2/v2 v2.9.4
