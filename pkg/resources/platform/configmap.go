@@ -55,6 +55,13 @@ scheduler:
         spec:
           profile: kind
           tenancy: Shared
+    workload-odg:
+      template:
+        metadata:
+          namespace: %[3]s
+        spec:
+          profile: kind
+          tenancy: Exclusive
 `, providers.OnboardingClusterName(environment), ControlPlanesNamespace, WorkloadsNamespace))
 }
 

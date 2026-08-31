@@ -47,6 +47,11 @@ func GatewayServiceConfig(name string) *resources.Resource {
 							"matchPurpose": "workload",
 						},
 					},
+					map[string]interface{}{
+						"selector": map[string]interface{}{
+							"matchPurpose": "workload-odg",
+						},
+					},
 				},
 				"envoyGateway": map[string]interface{}{
 					"chart": map[string]interface{}{
