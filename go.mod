@@ -4,7 +4,7 @@ go 1.27.2
 
 require (
 	github.com/fluxcd/flux2/v2 v2.9.6
-	github.com/openmcp-project/cluster-provider-kind v0.7.1
+	github.com/openmcp-project/cluster-provider-kind v0.7.2
 	github.com/openmcp-project/openmcp-operator/api v1.4.2
 	github.com/spf13/cobra v1.10.2
 	go.uber.org/zap v1.28.0
