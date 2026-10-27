@@ -92,6 +92,27 @@ spec:
 
 Only fields present in the config file override the defaults — omitted fields keep their default values.
 
+#### Replacing provider lists
+
+By default the `clusterProviders`, `serviceProviders`, and `platformServices`
+lists are *merged* into the defaults by name, so an omitted or empty list keeps
+all defaults. To install fewer components than the defaults, set the
+corresponding `*Mode` field to `replace`; the config's list then wins wholesale,
+including an empty list:
+
+```yaml
+spec:
+  serviceProvidersMode: replace   # default: merge
+  serviceProviders: []            # with mode=replace -> install none
+```
+
+The same applies to `clusterProvidersMode` and `platformServicesMode`. Validate
+a config file with:
+
+```bash
+ocpctl env validate --config env.yaml
+```
+
 #### Flux Configuration
 
 The following fields are provided to configure the deployed flux instance

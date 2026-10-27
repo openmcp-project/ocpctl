@@ -13,6 +13,7 @@ func NewEnvironmentsCmd() *cobra.Command {
 		newApplyCmd(),
 		newListCmd(),
 		newDeleteCmd(),
+		newValidateCmd(),
 	)
 
 	return cmd
