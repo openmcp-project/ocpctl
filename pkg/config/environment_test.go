@@ -111,6 +111,7 @@ func TestMergeComponents(t *testing.T) {
 		name    string
 		base    []ComponentSpec
 		overlay []ComponentSpec
+		mode    MergeMode
 		want    []ComponentSpec
 	}{
 		{
@@ -196,10 +197,38 @@ func TestMergeComponents(t *testing.T) {
 			overlay: nil,
 			want:    nil,
 		},
+		{
+			name:    "replace mode with empty overlay returns empty",
+			base:    []ComponentSpec{{Name: "sp-flux", Image: "ghcr.io/openmcp-project/images/service-provider-flux:v1.0.0"}},
+			overlay: []ComponentSpec{},
+			mode:    MergeModeReplace,
+			want:    nil,
+		},
+		{
+			name:    "replace mode with nil overlay returns nil",
+			base:    []ComponentSpec{{Name: "sp-flux", Image: "ghcr.io/openmcp-project/images/service-provider-flux:v1.0.0"}},
+			overlay: nil,
+			mode:    MergeModeReplace,
+			want:    nil,
+		},
+		{
+			name:    "replace mode with overlay wins wholesale",
+			base:    []ComponentSpec{{Name: "sp-flux", Image: "ghcr.io/openmcp-project/images/service-provider-flux:v1.0.0"}},
+			overlay: []ComponentSpec{{Name: "sp-kro", Image: "ghcr.io/openmcp-project/images/service-provider-kro:v1.0.0"}},
+			mode:    MergeModeReplace,
+			want:    []ComponentSpec{{Name: "sp-kro", Image: "ghcr.io/openmcp-project/images/service-provider-kro:v1.0.0"}},
+		},
+		{
+			name:    "explicit merge mode behaves like default",
+			base:    []ComponentSpec{{Name: "sp-flux", Image: "ghcr.io/openmcp-project/images/service-provider-flux:v1.0.0"}},
+			overlay: []ComponentSpec{},
+			mode:    MergeModeMerge,
+			want:    []ComponentSpec{{Name: "sp-flux", Image: "ghcr.io/openmcp-project/images/service-provider-flux:v1.0.0"}},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := mergeComponents(tt.base, tt.overlay)
+			got := mergeComponents(tt.base, tt.overlay, tt.mode)
 			if len(got) != len(tt.want) {
 				t.Fatalf("len = %d, want %d", len(got), len(tt.want))
 			}
@@ -207,6 +236,57 @@ func TestMergeComponents(t *testing.T) {
 				if got[i] != tt.want[i] {
 					t.Errorf("[%d] = %+v, want %+v", i, got[i], tt.want[i])
 				}
+			}
+		})
+	}
+}
+
+func TestMergeServiceProvidersReplace(t *testing.T) {
+	base := Default()
+	if len(base.Spec.ServiceProviders) == 0 {
+		t.Fatal("expected defaults to ship service providers")
+	}
+
+	overlay := &Environment{Spec: EnvironmentSpec{ServiceProvidersMode: MergeModeReplace}}
+	got := Merge(base, overlay)
+	if len(got.Spec.ServiceProviders) != 0 {
+		t.Errorf("replace mode with empty overlay: got %d service providers, want 0", len(got.Spec.ServiceProviders))
+	}
+	// Other sections keep defaults.
+	if len(got.Spec.PlatformServices) != len(base.Spec.PlatformServices) {
+		t.Errorf("platform services changed: got %d, want %d", len(got.Spec.PlatformServices), len(base.Spec.PlatformServices))
+	}
+}
+
+func TestMergeDefaultsRegression(t *testing.T) {
+	base := Default()
+	overlay := &Environment{Spec: EnvironmentSpec{Namespace: "my-ns"}}
+	got := Merge(base, overlay)
+	if len(got.Spec.ServiceProviders) != len(base.Spec.ServiceProviders) {
+		t.Errorf("omitted mode changed service providers: got %d, want %d", len(got.Spec.ServiceProviders), len(base.Spec.ServiceProviders))
+	}
+}
+
+func TestValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		mode    MergeMode
+		wantErr bool
+	}{
+		{name: "empty mode ok", mode: "", wantErr: false},
+		{name: "merge ok", mode: MergeModeMerge, wantErr: false},
+		{name: "replace ok", mode: MergeModeReplace, wantErr: false},
+		{name: "invalid mode", mode: "bogus", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := &Environment{Spec: EnvironmentSpec{ServiceProvidersMode: tt.mode}}
+			err := e.Validate()
+			if tt.wantErr && err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
 		})
 	}

@@ -26,6 +26,9 @@ func newApplyCmd() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("loading config: %w", err)
 				}
+				if err := userCfg.Validate(); err != nil {
+					return fmt.Errorf("invalid config: %w", err)
+				}
 				cfg = config.Merge(cfg, userCfg)
 			}
 
